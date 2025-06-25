@@ -1,6 +1,6 @@
 // src/screens/CropListScreen.js
 
-import React, {useState, useEffect, useCallback} from 'react';
+import React, {useState, useEffect, useCallback, useRef} from 'react';
 import {
   View,
   Text,
@@ -40,6 +40,7 @@ const CropListScreen = ({navigation}) => {
   const [crops, setCrops] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedSwipeableCrop, setSelectedSwipeableCrop] = useState(null);
+  const swipeableRefs = useRef(new Map()).current; // Create a Map to store refs for each item
 
   const loadCrops = useCallback(async () => {
     setIsLoading(true);
@@ -138,113 +139,133 @@ const CropListScreen = ({navigation}) => {
     </View>
   );
 
-  const renderCropItem = ({item, index}) => {
+  // Update the renderItem function to not use hooks inside
+  const renderItem = ({item, index}) => {
     return (
-      <Animated.View
-        entering={FadeInDown.delay(index * 50).duration(300)} // Apply animation
-        style={themedStyles.animatedItemWrapper} // Wrapper for animation and margin control
+      <Swipeable
+        ref={ref => {
+          // Store the ref in our Map using the item's uniqueId as the key
+          if (ref) {
+            swipeableRefs.set(item.uniqueId, ref);
+          } else {
+            swipeableRefs.delete(item.uniqueId);
+          }
+        }}
+        renderRightActions={(progress, dragX) =>
+          renderRightActions(progress, dragX, swipeableRefs.get(item.uniqueId))
+        }
+        renderLeftActions={(progress, dragX) =>
+          renderLeftActions(progress, dragX, swipeableRefs.get(item.uniqueId))
+        }
+        onSwipeableOpen={() => setSelectedSwipeableCrop(item)}
+        friction={2}
+        overshootFriction={8}
+        rightThreshold={SWIPE_THRESHOLD_PERCENT * screenWidth}
+        leftThreshold={SWIPE_THRESHOLD_PERCENT * screenWidth} // Add this line
+        containerStyle={themedStyles.swipeableContainer} // Add this for consistent hitbox
       >
-        <Swipeable
-          key={item.uniqueId?.toString() || `crop-${index}`}
-          renderRightActions={(progress, dragX, swipeable) =>
-            renderRightActions(progress, dragX, swipeable)
-          }
-          renderLeftActions={(progress, dragX, swipeable) =>
-            renderLeftActions(progress, dragX, swipeable)
-          }
-          onSwipeableWillOpen={() => setSelectedSwipeableCrop(item)}
-          onSwipeableWillClose={() => setSelectedSwipeableCrop(null)}
-          onSwipeableOpen={() => setSelectedSwipeableCrop(item)}
-          onSwipeableClose={() => setSelectedSwipeableCrop(null)}
-          friction={0.6}
-          leftThreshold={SWIPE_ACTION_WIDTH * 0.8} // Threshold based on action width
-          rightThreshold={SWIPE_ACTION_WIDTH * 0.8}
-          overshootLeft={false} // Prevent overshooting
-          overshootRight={false} // Prevent overshooting
-        >
-          <View style={themedStyles.listItemContentWrapper}>
-            <TouchableOpacity
-              style={themedStyles.cardContent}
-              activeOpacity={0.7}
-              onPress={() => navigation.navigate('CropDetail', {crop: item})}>
-              <View style={themedStyles.cardHeader}>
-                <MaterialCommunityIcons
-                  name="grass"
-                  size={isTablet ? FONT_SIZES.h3 * 1.2 : FONT_SIZES.h3}
-                  color={COLORS.primary}
-                  style={themedStyles.cropIcon}
-                />
-                <Text
-                  style={[
-                    themedStyles.cropName,
-                    isTablet && themedStyles.cropNameTablet,
-                  ]}>
+        <Animated.View
+          entering={FadeInDown.delay(index * 70).duration(300)}
+          style={[
+            themedStyles.cropCard,
+            isTablet && themedStyles.cropCardTablet,
+          ]}>
+          <TouchableOpacity
+            style={themedStyles.cardContent}
+            activeOpacity={0.7}
+            onPress={() => navigation.navigate('CropDetail', {crop: item})}>
+            <View style={themedStyles.cropIconContainer}>
+              <MaterialCommunityIcons
+                name="sprout"
+                size={isTablet ? 32 : 24}
+                color={COLORS.primary}
+              />
+            </View>
+
+            <View style={themedStyles.cropInfo}>
+              <View style={themedStyles.cropNameRow}>
+                <Text style={themedStyles.cropName}>
                   {item.crop_name || 'Unnamed Crop'}
-                  <Text>🌿</Text>
+                </Text>
+                <Text style={themedStyles.cropYear}>{item.year || 'N/A'}</Text>
+              </View>
+
+              <Text style={themedStyles.cropLocation}>
+                {item.district}, {item.state}, {item.country}
+              </Text>
+
+              <View style={themedStyles.taskCountContainer}>
+                <MaterialCommunityIcons
+                  name="calendar-check"
+                  size={isTablet ? 18 : 14}
+                  color={COLORS.accent}
+                  style={{marginRight: 4}}
+                />
+                <Text style={themedStyles.taskCount}>
+                  {getCropTaskCount(item)} tasks
                 </Text>
               </View>
-              <Text
-                style={[
-                  themedStyles.detail,
-                  isTablet && themedStyles.detailTablet,
-                ]}>
-                <Text style={themedStyles.bold}>Region:</Text>
-                <Text>
-                  {item.state || 'N/A'} - {item.district || 'N/A'}
-                </Text>
-              </Text>
-              <Text
-                style={[
-                  themedStyles.detail,
-                  isTablet && themedStyles.detailTablet,
-                ]}>
-                <Text style={themedStyles.bold}>Soil:</Text>
-                <Text>
-                  {item.soil_type || 'N/A'},{'\n'}
-                </Text>
-                <Text style={themedStyles.bold}>Climate:</Text>
-                <Text>{item.climate_condition || 'N/A'}</Text>
-              </Text>
-              <Text
-                style={[
-                  themedStyles.detail,
-                  isTablet && themedStyles.detailTablet,
-                ]}>
-                <Text style={themedStyles.bold}>Year:</Text>
-                <Text>{item.year || 'N/A'}</Text>
-              </Text>
-            </TouchableOpacity>
-
-            {/* Visible Edit and Delete Buttons */}
-            <View style={themedStyles.buttonContainer}>
-              <TouchableOpacity
-                style={themedStyles.iconButton}
-                onPress={() => handleEditCrop(item)}
-                hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}>
-                <MaterialCommunityIcons
-                  name="pencil-outline"
-                  size={isTablet ? 28 : 24}
-                  color={COLORS.primaryDark}
-                />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={themedStyles.iconButton}
-                onPress={() => handleDeleteCrop(item.uniqueId)}
-                hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}>
-                <MaterialIcons
-                  name="delete-outline"
-                  size={isTablet ? 28 : 24}
-                  color={COLORS.error}
-                />
-              </TouchableOpacity>
             </View>
-          </View>
-        </Swipeable>
-      </Animated.View>
+
+            <MaterialCommunityIcons
+              name="chevron-right"
+              size={isTablet ? 28 : 24}
+              color={COLORS.textLight}
+            />
+          </TouchableOpacity>
+        </Animated.View>
+      </Swipeable>
     );
   };
 
-  // const numColumns = isTablet ? 2 : 1; // Calculate numColumns in the main component
+  // Add this function to count tasks for each crop
+  const getCropTaskCount = crop => {
+    let count = 0;
+    for (const key in crop) {
+      if (
+        (key.endsWith('_start') ||
+          key.endsWith('_end') ||
+          key.includes('date')) &&
+        crop[key] !== 'NA' &&
+        crop[key] !== '' &&
+        !key.startsWith('tips_') &&
+        !key.startsWith('description_')
+      ) {
+        count++;
+      }
+    }
+    return count;
+  };
+
+  // Update the EmptyState component for better appearance
+  const EmptyState = () => (
+    <View style={themedStyles.emptyContainer}>
+      <Animated.View
+        entering={FadeInDown.duration(400)}
+        style={themedStyles.emptyContent}>
+        <MaterialCommunityIcons
+          name="sprout-outline"
+          size={isTablet ? 100 : 80}
+          color={COLORS.disabled}
+        />
+        <Text style={themedStyles.emptyTitle}>No Crop Schedules</Text>
+        <Text style={themedStyles.emptyText}>
+          Generate your first AI-powered crop schedule to get started.
+        </Text>
+        <TouchableOpacity
+          style={themedStyles.emptyButton}
+          onPress={() => navigation.navigate('GenerateCrop')}>
+          <MaterialCommunityIcons
+            name="plus"
+            size={18}
+            color={COLORS.white}
+            style={{marginRight: 8}}
+          />
+          <Text style={themedStyles.emptyButtonText}>Add New Crop</Text>
+        </TouchableOpacity>
+      </Animated.View>
+    </View>
+  );
 
   return (
     <SafeAreaView style={themedStyles.safeArea}>
@@ -279,33 +300,9 @@ const CropListScreen = ({navigation}) => {
             keyExtractor={item =>
               item.uniqueId?.toString() || `crop-${Math.random()}`
             }
-            renderItem={renderCropItem}
+            renderItem={renderItem}
             contentContainerStyle={themedStyles.listContentContainer}
-            ListEmptyComponent={
-              !isLoading ? (
-                <View style={themedStyles.emptyContainer}>
-                  <MaterialIcons
-                    name="inbox"
-                    size={isTablet ? 80 : 60}
-                    color={COLORS.disabled}
-                  />
-                  <Text
-                    style={[
-                      themedStyles.emptyText,
-                      isTablet && themedStyles.emptyTextTablet,
-                    ]}>
-                    No crop schedules found.
-                  </Text>
-                  <Text
-                    style={[
-                      themedStyles.emptySubText,
-                      isTablet && themedStyles.emptySubTextTablet,
-                    ]}>
-                    Tap "Generate New Schedule" to add one.
-                  </Text>
-                </View>
-              ) : null
-            }
+            ListEmptyComponent={!isLoading ? <EmptyState /> : null}
             numColumns={numColumns}
             key={numColumns}
             columnWrapperStyle={isTablet ? themedStyles.columnWrapper : null}
@@ -410,83 +407,91 @@ const themedStyles = StyleSheet.create({
     }),
   },
   cardContent: {
-    flex: 1, // Content takes remaining space next to buttons
-    padding: isTablet ? SPACING.l : SPACING.m, // Responsive padding
-    justifyContent: 'space-between',
-    alignItems: 'flex-start', // Align content to the left
-    flexDirection: 'column',
-    height: isTablet ? 200 : 150, // Responsive card height
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDERS.radiusMedium,
-    // marginBottom: SPACING.m, // Margin between items
-    marginHorizontal: isTablet ? SPACING.s / 2 : 0, // Small horizontal margin for tablet
-  },
-  cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: SPACING.s,
+    padding: SPACING.m,
   },
-  cropIcon: {
-    marginRight: SPACING.s,
+  cropIconContainer: {
+    width: isTablet ? 60 : 46,
+    height: isTablet ? 60 : 46,
+    borderRadius: isTablet ? 30 : 23,
+    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: SPACING.m,
+  },
+  cropInfo: {
+    flex: 1,
+  },
+  cropNameRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   cropName: {
-    fontSize: isTablet ? FONT_SIZES.h3 : FONT_SIZES.body, // Responsive font size
+    fontSize: isTablet ? FONT_SIZES.h4 : FONT_SIZES.body,
+    fontWeight: FONT_WEIGHTS.bold,
+    color: COLORS.white,
+    flex: 1,
+  },
+  cropYear: {
+    fontSize: FONT_SIZES.caption,
+    color: COLORS.accent,
     fontWeight: FONT_WEIGHTS.medium,
-    color: COLORS.primaryDark, // Use primaryDark for better contrast
-    flexShrink: 1,
-    flexWrap: 'wrap', // Allow wrapping
+    backgroundColor: 'rgba(255,193,7,0.1)',
+    paddingHorizontal: SPACING.xs,
+    paddingVertical: 2,
+    borderRadius: BORDERS.radiusSmall,
   },
-  detail: {
-    fontSize: isTablet ? FONT_SIZES.h4 : FONT_SIZES.caption, // Responsive detail font size
+  cropLocation: {
+    fontSize: isTablet ? FONT_SIZES.body : FONT_SIZES.caption,
     color: COLORS.textLight,
-    marginTop: SPACING.xs,
-    lineHeight: (isTablet ? FONT_SIZES.caption : FONT_SIZES.small) * 1.4, // Responsive line height
-    flexWrap: 'wrap', // Allow wrapping
+    marginTop: 2,
+    marginBottom: 4,
   },
-  bold: {
-    fontWeight: FONT_WEIGHTS.bold, // Make bold bolder
-    color: COLORS.text,
-  },
-  // buttonContainer: {
-  //   flexDirection: 'row',
-  //   alignItems: 'center',
-  // },
-  // iconButton: {
-  //   padding: SPACING.s,
-  //   marginLeft: SPACING.s,
-  // },
-  buttonContainer: {
-    // This is for the edit/delete icons displayed *next* to the card content
-    flexDirection: 'column', // Stack buttons vertically
+  taskCountContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-around', // Space buttons evenly
   },
-  iconButton: {
-    padding: isTablet ? SPACING.s : SPACING.xs, // Responsive padding
-    marginHorizontal: isTablet ? SPACING.s : SPACING.xs, // Responsive margin
-    marginBottom: isTablet ? SPACING.s : SPACING.xs, // Responsive bottom margin
+  taskCount: {
+    fontSize: FONT_SIZES.caption,
+    color: COLORS.accent,
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: isTablet ? SIZES.height * 0.1 : SIZES.height * 0.15, // Responsive top margin
-    paddingHorizontal: SPACING.m, // Add horizontal padding to empty state
+    padding: SPACING.xl,
+  },
+  emptyContent: {
+    alignItems: 'center',
+    maxWidth: 400,
+  },
+  emptyTitle: {
+    fontSize: isTablet ? FONT_SIZES.h3 : FONT_SIZES.h4,
+    fontWeight: FONT_WEIGHTS.bold,
+    color: COLORS.text,
+    marginTop: SPACING.l,
+    marginBottom: SPACING.xs,
   },
   emptyText: {
-    textAlign: 'center',
-    marginTop: SPACING.m,
-    fontSize: isTablet ? FONT_SIZES.h4 : FONT_SIZES.body,
-    fontWeight: FONT_WEIGHTS.bold, // Make empty text bolder
+    fontSize: isTablet ? FONT_SIZES.body : FONT_SIZES.small,
     color: COLORS.textLight,
-    paddingHorizontal: SPACING.s, // Add padding
+    textAlign: 'center',
+    marginBottom: SPACING.l,
   },
-  emptySubText: {
-    textAlign: 'center',
-    marginTop: SPACING.s,
-    fontSize: isTablet ? FONT_SIZES.body : FONT_SIZES.caption, // Responsive subtext size
-    color: COLORS.textLight,
-    paddingHorizontal: SPACING.s, // Add padding
+  emptyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.primary,
+    paddingVertical: SPACING.s,
+    paddingHorizontal: SPACING.l,
+    borderRadius: BORDERS.radiusMedium,
+  },
+  emptyButtonText: {
+    color: COLORS.white,
+    fontSize: FONT_SIZES.body,
+    fontWeight: FONT_WEIGHTS.medium,
   },
   loadingIndicator: {
     marginTop: isTablet ? SIZES.height * 0.15 : SIZES.height * 0.2, // Responsive top margin
@@ -497,24 +502,24 @@ const themedStyles = StyleSheet.create({
     alignSelf: 'center',
   },
   rightActionsContainer: {
-    width: SWIPE_ACTION_WIDTH, // Use fixed responsive width
+    width: SWIPE_ACTION_WIDTH,
+    height: '100%', // Make sure height is 100%
     justifyContent: 'center',
-    alignItems: 'flex-end', // Align actions to the right edge
-    marginVertical: SPACING.m / 2, // Match vertical margin of items
+    alignItems: 'flex-end',
   },
   leftActionsContainer: {
-    width: SWIPE_ACTION_WIDTH, // Use fixed responsive width
+    width: SWIPE_ACTION_WIDTH,
+    height: '100%', // Make sure height is 100%
     justifyContent: 'center',
-    alignItems: 'flex-start', // Align actions to the left edge
-    marginVertical: SPACING.m / 2, // Match vertical margin of items
+    alignItems: 'flex-start',
   },
   deleteAction: {
     backgroundColor: COLORS.error,
     justifyContent: 'center',
     borderRadius: BORDERS.radiusMedium,
-    borderColor: COLORS.errorDark, // Darker error border
+    borderColor: COLORS.errorDark,
     borderWidth: 1,
-    width: '85%', // Make action button take most of the width
+    width: '85%',
     height: '90%',
     alignItems: 'center',
   },
@@ -522,9 +527,9 @@ const themedStyles = StyleSheet.create({
     backgroundColor: COLORS.primary,
     justifyContent: 'center',
     borderRadius: BORDERS.radiusMedium,
-    borderColor: COLORS.primaryDark, // Primary border
+    borderColor: COLORS.primaryDark,
     borderWidth: 1,
-    width: '85%', // Make action button take most of the width
+    width: '85%',
     height: '90%',
     alignItems: 'center',
   },
@@ -533,6 +538,25 @@ const themedStyles = StyleSheet.create({
     fontWeight: FONT_WEIGHTS.bold, // Make action text bold
     fontSize: isTablet ? FONT_SIZES.body : FONT_SIZES.caption, // Responsive action text size
     marginTop: SPACING.xs / 2, // Smaller margin below icon
+  },
+  swipeableContainer: {
+    // Add this style for consistent hitbox
+    overflow: 'hidden',
+    borderRadius: BORDERS.radiusMedium,
+    marginVertical: SPACING.s / 2,
+  },
+  cropCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDERS.radiusMedium,
+    marginHorizontal: SPACING.m,
+    marginBottom: 0, // Remove bottom margin as it's handled by swipeableContainer
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    borderLeftWidth: 4,
+    borderLeftColor: COLORS.accent,
   },
 });
 

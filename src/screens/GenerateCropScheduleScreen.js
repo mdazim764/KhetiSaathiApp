@@ -1,511 +1,4 @@
-// // src/screens/GenerateCropScheduleScreen.js
-// import React, {useState, useEffect} from 'react';
-// import {
-//   View,
-//   Text,
-//   StyleSheet,
-//   TouchableOpacity,
-//   Alert,
-//   ScrollView,
-//   ActivityIndicator,
-// } from 'react-native';
-// import {Dropdown} from 'react-native-element-dropdown';
-// import AsyncStorage from '@react-native-async-storage/async-storage';
-// import data from '../data/data.json';
-// import theme from '../constants/theme';
-// import env from '../config/env';
-
-// const {COLORS, FONT_SIZES, FONT_WEIGHTS, SPACING, BORDERS} = theme;
-// // const SERVER_URL =
-// // 'https://crop-calendar-backend-git-main-azim-khairdis-projects.vercel.app/';
-// const SERVER_URL = env.SERVER_URL;
-
-// const GenerateCropScheduleScreen = ({navigation, route}) => {
-//   // If editing, the crop schedule to be updated is passed via route.params.crop
-//   const editingCrop = route.params?.crop;
-
-//   // Destructure local JSON data
-//   const {countries, states, crops, years} = data;
-
-//   // Prepare dropdown data
-//   const countryData = countries.map(item => ({label: item, value: item}));
-//   const stateData = Object.keys(states).map(item => ({
-//     label: item,
-//     value: item,
-//   }));
-//   const cropData = crops.map(item => ({label: item, value: item}));
-//   const yearData = years.map(item => ({label: String(item), value: item}));
-
-//   // Set initial state based on editingCrop or defaults
-//   const [selectedCountry, setSelectedCountry] = useState(
-//     editingCrop?.country || countryData[0]?.value || '',
-//   );
-//   const [selectedState, setSelectedState] = useState(
-//     editingCrop?.state || stateData[0]?.value || '',
-//   );
-//   const [cityList, setCityList] = useState(
-//     states[editingCrop?.state || stateData[0]?.value] || [],
-//   );
-//   const [selectedCity, setSelectedCity] = useState(
-//     editingCrop?.district ||
-//       (states[stateData[0]?.value] ? states[stateData[0]?.value][0] : ''),
-//   );
-//   const [selectedCrop, setSelectedCrop] = useState(
-//     editingCrop?.crop_name || cropData[0]?.value || '',
-//   );
-//   const [selectedYear, setSelectedYear] = useState(
-//     editingCrop?.year || yearData[0]?.value || '',
-//   );
-//   const [loading, setLoading] = useState(false);
-
-//   useEffect(() => {
-//     if (!editingCrop) {
-//       if (countryData.length > 0) setSelectedCountry(countryData[0].value);
-//       if (stateData.length > 0) {
-//         setSelectedState(stateData[0].value);
-//         setCityList(states[stateData[0].value] || []);
-//         if (states[stateData[0].value]?.length > 0) {
-//           setSelectedCity(states[stateData[0].value][0]);
-//         }
-//       }
-//       if (cropData.length > 0) setSelectedCrop(cropData[0].value);
-//       if (yearData.length > 0) setSelectedYear(yearData[0].value);
-//     }
-//   }, []);
-
-//   useEffect(() => {
-//     if (!SERVER_URL) {
-//       console.error('SERVER_URL environment variable is not configured');
-//       Alert.alert(
-//         'Configuration Error',
-//         'Application is not properly configured. Please contact support.',
-//       );
-//     } else {
-//       console.log('Using SERVER_URL:', SERVER_URL);
-//       console.log(
-//         'Running in:',
-//         env.isDevelopment ? 'DEVELOPMENT' : 'PRODUCTION',
-//       );
-//     }
-//   }, []);
-
-//   const handleStateChange = newState => {
-//     setSelectedState(newState);
-//     const newCityList = states[newState] || [];
-//     setCityList(newCityList);
-//     setSelectedCity(newCityList.length > 0 ? newCityList[0] : '');
-//   };
-
-//   const makeRequestWithRetry = async (url, options, maxRetries = 2) => {
-//     let lastError;
-
-//     for (let attempt = 0; attempt <= maxRetries; attempt++) {
-//       try {
-//         // Add timeout to fetch
-//         const controller = new AbortController();
-//         const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
-
-//         const response = await fetch(url, {
-//           ...options,
-//           signal: controller.signal,
-//         });
-
-//         clearTimeout(timeoutId);
-//         return response;
-//       } catch (err) {
-//         console.log(
-//           `Attempt ${attempt + 1}/${maxRetries + 1} failed:`,
-//           err.message,
-//         );
-//         lastError = err;
-
-//         // Wait before retrying (exponential backoff)
-//         if (attempt < maxRetries) {
-//           await new Promise(r => setTimeout(r, 1000 * Math.pow(2, attempt)));
-//         }
-//       }
-//     }
-
-//     throw lastError;
-//   };
-
-//   const handleGenerateSchedule = async () => {
-//     try {
-//       setLoading(true);
-
-//       // Development logging
-//       if (env.isDevelopment && env.isDevelopment()) {
-//         console.log('Making request to:', `${SERVER_URL}/generate-schedule`);
-//         console.log('Request payload:', {
-//           country: selectedCountry,
-//           region: selectedState,
-//           area: selectedCity,
-//           cropName: selectedCrop,
-//           year: selectedYear,
-//         });
-//       }
-
-//       // Use the retry function instead of direct fetch
-//       const response = await makeRequestWithRetry(
-//         `${SERVER_URL}/generate-schedule`,
-//         {
-//           method: 'POST',
-//           headers: {'Content-Type': 'application/json'},
-//           body: JSON.stringify({
-//             country: selectedCountry,
-//             region: selectedState,
-//             area: selectedCity,
-//             cropName: selectedCrop,
-//             year: selectedYear,
-//           }),
-//         },
-//       );
-
-//       if (!response.ok) {
-//         const errorText = await response.text();
-//         console.log('Server error response:', errorText);
-//         Alert.alert('Error', `Server returned ${response.status}`);
-//         setLoading(false);
-//         return;
-//       }
-
-//       const scheduleResponse = await response.json();
-
-//       // Build the new crop schedule object using the schedule response and selected parameters
-//       const newCrop = {
-//         ...scheduleResponse,
-//         country: selectedCountry,
-//         state: selectedState,
-//         district: selectedCity,
-//         crop_name: selectedCrop,
-//         year: selectedYear,
-//       };
-
-//       // Retrieve the existing crops array from AsyncStorage
-//       const storedStr = await AsyncStorage.getItem('crops');
-//       const oldCrops = storedStr ? JSON.parse(storedStr) : [];
-
-//       if (editingCrop) {
-//         // --- Editing Mode ---
-//         // Update the existing crop schedule using the uniqueId of the crop being edited.
-//         const updatedCrops = oldCrops.map(crop =>
-//           crop.uniqueId === editingCrop.uniqueId
-//             ? {...newCrop, uniqueId: editingCrop.uniqueId}
-//             : crop,
-//         );
-//         await AsyncStorage.setItem('crops', JSON.stringify(updatedCrops));
-//         setLoading(false);
-//         Alert.alert('Success', 'Schedule updated!', [
-//           {text: 'OK', onPress: () => navigation.navigate('CropList')},
-//         ]);
-//         return;
-//       }
-
-//       // For new schedule generation, check if a duplicate already exists
-//       const duplicateIndex = oldCrops.findIndex(
-//         crop =>
-//           crop.country === newCrop.country &&
-//           crop.state === newCrop.state &&
-//           crop.district === newCrop.district &&
-//           crop.crop_name === newCrop.crop_name &&
-//           crop.year === newCrop.year,
-//       );
-
-//       if (duplicateIndex !== -1) {
-//         // Ask the user whether to update the existing schedule
-//         Alert.alert(
-//           'Duplicate Schedule Detected',
-//           'A crop schedule with the same parameters already exists. Do you want to update the existing schedule?',
-//           [
-//             {
-//               text: 'Cancel',
-//               style: 'cancel',
-//               onPress: () => {
-//                 setLoading(false);
-//               },
-//             },
-//             {
-//               text: 'Update',
-//               onPress: async () => {
-//                 oldCrops[duplicateIndex] = {
-//                   ...newCrop,
-//                   uniqueId: oldCrops[duplicateIndex].uniqueId,
-//                 };
-//                 await AsyncStorage.setItem('crops', JSON.stringify(oldCrops));
-//                 setLoading(false);
-//                 Alert.alert('Success', 'Schedule updated!', [
-//                   {text: 'OK', onPress: () => navigation.navigate('CropList')},
-//                 ]);
-//               },
-//             },
-//           ],
-//         );
-//         return;
-//       }
-
-//       // Otherwise, it's a new schedule – add to stored array.
-//       newCrop.uniqueId = Date.now().toString();
-//       const updated = [...oldCrops, newCrop];
-//       await AsyncStorage.setItem('crops', JSON.stringify(updated));
-//       setLoading(false);
-//       Alert.alert('Success', 'Schedule generated & stored!', [
-//         {text: 'OK', onPress: () => navigation.navigate('CropList')},
-//       ]);
-//     } catch (err) {
-//       console.error('handleGenerateSchedule error:', err);
-
-//       // Use mock data in development mode if network fails
-//       if (
-//         env.isDevelopment &&
-//         env.isDevelopment() &&
-//         err.message.includes('Network request failed')
-//       ) {
-//         console.log('Using mock data in development mode');
-//         const mockData = getMockScheduleData(selectedCrop, selectedYear);
-
-//         // Build the new crop schedule object
-//         const newCrop = {
-//           ...mockData,
-//           country: selectedCountry,
-//           state: selectedState,
-//           district: selectedCity,
-//           crop_name: selectedCrop,
-//           year: selectedYear,
-//         };
-
-//         try {
-//           // Retrieve the existing crops array from AsyncStorage
-//           const storedStr = await AsyncStorage.getItem('crops');
-//           const oldCrops = storedStr ? JSON.parse(storedStr) : [];
-
-//           if (editingCrop) {
-//             // Update existing crop
-//             const updatedCrops = oldCrops.map(crop =>
-//               crop.uniqueId === editingCrop.uniqueId
-//                 ? {...newCrop, uniqueId: editingCrop.uniqueId}
-//                 : crop,
-//             );
-//             await AsyncStorage.setItem('crops', JSON.stringify(updatedCrops));
-//             setLoading(false);
-//             Alert.alert(
-//               'Success (Mock Data)',
-//               'Schedule updated with mock data!',
-//               [{text: 'OK', onPress: () => navigation.navigate('CropList')}],
-//             );
-//             return;
-//           }
-
-//           // Add new crop with mock data
-//           newCrop.uniqueId = Date.now().toString();
-//           const updated = [...oldCrops, newCrop];
-//           await AsyncStorage.setItem('crops', JSON.stringify(updated));
-//           setLoading(false);
-//           Alert.alert(
-//             'Success (Mock Data)',
-//             'Mock schedule generated for development mode',
-//             [{text: 'OK', onPress: () => navigation.navigate('CropList')}],
-//           );
-//           return;
-//         } catch (mockError) {
-//           console.error('Error storing mock data:', mockError);
-//         }
-//       }
-
-//       setLoading(false);
-//       if (err.message && err.message.includes('Network request failed')) {
-//         Alert.alert(
-//           'Connection Error',
-//           'Could not connect to the server. Please check your internet connection or try again later.',
-//         );
-//       } else {
-//         Alert.alert('Error', 'Something went wrong. Check console logs.');
-//       }
-//     }
-//   };
-
-//   if (loading) {
-//     return (
-//       <View style={styles.loadingContainer}>
-//         <ActivityIndicator size="large" color={COLORS.primary} />
-//       </View>
-//     );
-//   }
-
-//   return (
-//     <View style={styles.container}>
-//       <ScrollView
-//         contentContainerStyle={styles.scrollContent}
-//         keyboardShouldPersistTaps="handled">
-//         <Text style={styles.header}>
-//           {editingCrop ? 'Edit Crop Schedule' : 'Generate New Schedule'}
-//         </Text>
-
-//         <View style={styles.formGroup}>
-//           <Text style={styles.label}>Country</Text>
-//           <Dropdown
-//             style={styles.dropdown}
-//             selectedTextStyle={styles.dropdownText}
-//             data={countryData}
-//             labelField="label"
-//             valueField="value"
-//             placeholder="Select Country"
-//             value={selectedCountry}
-//             onChange={item => setSelectedCountry(item.value)}
-//             placeholderStyle={styles.placeholderStyle}
-//           />
-//         </View>
-
-//         <View style={styles.formGroup}>
-//           <Text style={styles.label}>State/Region</Text>
-//           <Dropdown
-//             style={styles.dropdown}
-//             selectedTextStyle={styles.dropdownText}
-//             data={stateData}
-//             labelField="label"
-//             valueField="value"
-//             placeholder="Select State"
-//             value={selectedState}
-//             onChange={item => handleStateChange(item.value)}
-//             placeholderStyle={styles.placeholderStyle}
-//           />
-//         </View>
-
-//         <View style={styles.formGroup}>
-//           <Text style={styles.label}>City/District</Text>
-//           <Dropdown
-//             style={styles.dropdown}
-//             selectedTextStyle={styles.dropdownText}
-//             data={cityList.map(item => ({label: item, value: item}))}
-//             labelField="label"
-//             valueField="value"
-//             placeholder="Select City"
-//             value={selectedCity}
-//             onChange={item => setSelectedCity(item.value)}
-//             placeholderStyle={styles.placeholderStyle}
-//           />
-//         </View>
-
-//         <View style={styles.formGroup}>
-//           <Text style={styles.label}>Crop Type</Text>
-//           <Dropdown
-//             style={styles.dropdown}
-//             selectedTextStyle={styles.dropdownText}
-//             data={cropData}
-//             labelField="label"
-//             valueField="value"
-//             placeholder="Select Crop"
-//             value={selectedCrop}
-//             onChange={item => setSelectedCrop(item.value)}
-//             placeholderStyle={styles.placeholderStyle}
-//           />
-//         </View>
-
-//         <View style={styles.formGroup}>
-//           <Text style={styles.label}>Season Year</Text>
-//           <Dropdown
-//             style={styles.dropdown}
-//             selectedTextStyle={styles.dropdownText}
-//             data={yearData}
-//             labelField="label"
-//             valueField="value"
-//             placeholder="Select Year"
-//             value={selectedYear}
-//             onChange={item => setSelectedYear(item.value)}
-//             placeholderStyle={styles.placeholderStyle}
-//           />
-//         </View>
-
-//         <TouchableOpacity
-//           style={styles.button}
-//           onPress={handleGenerateSchedule}
-//           accessibilityLabel={
-//             editingCrop ? 'Update crop schedule' : 'Generate new crop schedule'
-//           }>
-//           <Text style={styles.buttonText}>
-//             {editingCrop ? 'Update Schedule' : 'Generate Schedule'}
-//           </Text>
-//         </TouchableOpacity>
-//       </ScrollView>
-//     </View>
-//   );
-// };
-
-// const styles = StyleSheet.create({
-//   container: {
-//     flex: 1,
-//     backgroundColor: COLORS.background,
-//     padding: SPACING.s,
-//   },
-//   scrollContent: {
-//     padding: SPACING.m,
-//     paddingBottom: SPACING.xxl,
-//   },
-//   header: {
-//     fontSize: FONT_SIZES.h3,
-//     fontWeight: FONT_WEIGHTS.bold,
-//     color: COLORS.text,
-//     marginBottom: SPACING.l,
-//     textAlign: 'center',
-//   },
-//   formGroup: {
-//     marginBottom: SPACING.m,
-//   },
-//   label: {
-//     fontSize: FONT_SIZES.body,
-//     color: COLORS.text,
-//     fontWeight: FONT_WEIGHTS.medium,
-//     marginBottom: SPACING.xs,
-//   },
-//   dropdown: {
-//     height: 50,
-//     backgroundColor: COLORS.surface,
-//     borderRadius: BORDERS.radiusMedium,
-//     paddingHorizontal: SPACING.m,
-//     borderWidth: 1,
-//     borderColor: COLORS.border,
-//   },
-//   dropdownText: {
-//     fontSize: FONT_SIZES.body,
-//     color: COLORS.text,
-//   },
-//   placeholderStyle: {
-//     fontSize: FONT_SIZES.body,
-//     color: COLORS.textLight,
-//   },
-//   button: {
-//     backgroundColor: COLORS.primary,
-//     paddingVertical: SPACING.m,
-//     paddingHorizontal: SPACING.xl,
-//     borderRadius: BORDERS.radiusMedium,
-//     marginTop: SPACING.m,
-//     ...Platform.select({
-//       ios: {
-//         shadowColor: COLORS.black,
-//         shadowOffset: {width: 0, height: 2},
-//         shadowOpacity: 0.1,
-//         shadowRadius: 4,
-//       },
-//       android: {
-//         elevation: 2,
-//       },
-//     }),
-//   },
-//   buttonText: {
-//     color: COLORS.white,
-//     fontSize: FONT_SIZES.body,
-//     fontWeight: FONT_WEIGHTS.bold,
-//     textAlign: 'center',
-//   },
-//   loadingContainer: {
-//     flex: 1,
-//     justifyContent: 'center',
-//     alignItems: 'center',
-//     backgroundColor: COLORS.background,
-//   },
-// });
-
-// export default GenerateCropScheduleScreen;
-
+//src/screens/GenerateCropScheduleScreen.js
 import React, {useState, useEffect} from 'react';
 import {
   View,
@@ -517,12 +10,19 @@ import {
   ActivityIndicator,
   TextInput,
   Platform,
+  Dimensions,
+  isTablet,
 } from 'react-native';
 import {Dropdown} from 'react-native-element-dropdown';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import data from '../data/data.json';
 import theme from '../constants/theme';
 import env from '../config/env';
+import {SafeAreaView} from 'react-native-safe-area-context';
+import LinearGradient from 'react-native-linear-gradient';
+import Feather from 'react-native-vector-icons/Feather';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import LottieView from 'lottie-react-native';
 
 const {COLORS, FONT_SIZES, FONT_WEIGHTS, SPACING, BORDERS} = theme;
 const SERVER_URL = env.SERVER_URL;
@@ -844,213 +344,359 @@ const GenerateCropScheduleScreen = ({navigation, route}) => {
   }
 
   return (
-    <View style={styles.container}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled">
-        <Text style={styles.header}>
+    <SafeAreaView style={styles.safeArea}>
+      <LinearGradient
+        colors={[COLORS.primaryDark, COLORS.primary]}
+        start={{x: 0, y: 0}}
+        end={{x: 1, y: 0}}
+        style={styles.header}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}>
+          <Feather name="arrow-left" size={24} color={COLORS.white} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>
           {editingCrop ? 'Edit Crop Schedule' : 'Generate New Schedule'}
         </Text>
+        <View style={{width: 24}} />
+      </LinearGradient>
 
-        {/* Country */}
-        <View style={styles.formGroup}>
-          <Text style={styles.label}>Country</Text>
-          <Dropdown
-            style={styles.dropdown}
-            selectedTextStyle={styles.dropdownText}
-            data={countryData}
-            labelField="label"
-            valueField="value"
-            placeholder="Select Country"
-            value={selectedCountry}
-            onChange={item => setSelectedCountry(item.value)}
-            placeholderStyle={styles.placeholderStyle}
-            search
-            searchPlaceholder="Search country..."
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <LottieView
+            source={require('../assets/animations/Animation-loading.json')}
+            autoPlay
+            loop
+            style={{width: 150, height: 150}}
           />
-        </View>
-
-        {/* State/Region */}
-        <View style={styles.formGroup}>
-          <Text style={styles.label}>State / Region</Text>
-          <Dropdown
-            style={styles.dropdown}
-            selectedTextStyle={styles.dropdownText}
-            data={stateData}
-            labelField="label"
-            valueField="value"
-            placeholder="Select State"
-            value={selectedState}
-            onChange={item => handleStateChange(item.value)}
-            placeholderStyle={styles.placeholderStyle}
-            search
-            searchPlaceholder="Search state..."
-          />
-        </View>
-
-        {/* City / District */}
-        <View style={styles.formGroup}>
-          <Text style={styles.label}>City / District</Text>
-          <Dropdown
-            style={styles.dropdown}
-            selectedTextStyle={styles.dropdownText}
-            data={cityList.map(item => ({label: item, value: item}))}
-            labelField="label"
-            valueField="value"
-            placeholder="Select District"
-            value={selectedCity}
-            onChange={item => setSelectedCity(item.value)}
-            placeholderStyle={styles.placeholderStyle}
-            search
-            searchPlaceholder="Search district..."
-          />
-        </View>
-
-        {/* Crop Type: either pick from list or type manually */}
-        <View style={styles.formGroup}>
-          <Text style={styles.label}>Crop (pick or type)</Text>
-          {/* 1) Searchable Dropdown */}
-          <Dropdown
-            style={styles.dropdown}
-            selectedTextStyle={styles.dropdownText}
-            data={crops
-              .map(item => ({label: item, value: item}))
-              .sort((a, b) => a.label.localeCompare(b.label))}
-            labelField="label"
-            valueField="value"
-            placeholder="Select Crop"
-            value={selectedCrop}
-            onChange={item => {
-              setSelectedCrop(item.value);
-              setCropInput(''); // clear manual input if picking from dropdown
-            }}
-            placeholderStyle={styles.placeholderStyle}
-            search
-            searchPlaceholder="Search crop..."
-          />
-
-          {/* 2) OR: Manual TextInput */}
-          <TextInput
-            style={[styles.dropdown, styles.manualInput]}
-            placeholder="Or type crop name here..."
-            placeholderTextColor={COLORS.textLight}
-            value={cropInput}
-            onChangeText={text => {
-              setCropInput(text);
-              setSelectedCrop(''); // clear dropdown selection if manually typing
-            }}
-            autoCapitalize="words"
-          />
-        </View>
-
-        {/* Season Year */}
-        <View style={styles.formGroup}>
-          <Text style={styles.label}>Season Year</Text>
-          <Dropdown
-            style={styles.dropdown}
-            selectedTextStyle={styles.dropdownText}
-            data={yearData}
-            labelField="label"
-            valueField="value"
-            placeholder="Select Year"
-            value={selectedYear}
-            onChange={item => setSelectedYear(item.value)}
-            placeholderStyle={styles.placeholderStyle}
-          />
-        </View>
-
-        <TouchableOpacity
-          style={styles.button}
-          onPress={handleGenerateSchedule}
-          accessibilityLabel={
-            editingCrop ? 'Update crop schedule' : 'Generate new crop schedule'
-          }>
-          <Text style={styles.buttonText}>
-            {editingCrop ? 'Update Schedule' : 'Generate Schedule'}
+          <Text style={styles.loadingText}>
+            {editingCrop
+              ? 'Updating your crop schedule...'
+              : 'Generating your AI crop schedule...'}
           </Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </View>
+          <Text style={styles.loadingSubtext}>
+            This may take a moment as we analyze climate, soil, and seasonal
+            data.
+          </Text>
+        </View>
+      ) : (
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled">
+          <View style={styles.formContainer}>
+            {/* Country */}
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Country</Text>
+              <View style={styles.inputContainer}>
+                <Feather
+                  name="map-pin"
+                  size={20}
+                  color={COLORS.accent}
+                  style={styles.inputIcon}
+                />
+                <Dropdown
+                  style={styles.dropdown}
+                  selectedTextStyle={styles.dropdownText}
+                  data={countryData}
+                  labelField="label"
+                  valueField="value"
+                  value={selectedCountry}
+                  onChange={item => setSelectedCountry(item.value)}
+                  placeholderStyle={styles.placeholderStyle}
+                  search
+                  searchPlaceholder="Search country..."
+                />
+              </View>
+            </View>
+
+            {/* State */}
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>State</Text>
+              <View style={styles.inputContainer}>
+                <Feather
+                  name="map"
+                  size={20}
+                  color={COLORS.accent}
+                  style={styles.inputIcon}
+                />
+                <Dropdown
+                  style={styles.dropdown}
+                  selectedTextStyle={styles.dropdownText}
+                  data={stateData}
+                  labelField="label"
+                  valueField="value"
+                  placeholder="Select State"
+                  value={selectedState}
+                  onChange={item => handleStateChange(item.value)}
+                  placeholderStyle={styles.placeholderStyle}
+                  search
+                  searchPlaceholder="Search state..."
+                />
+              </View>
+            </View>
+
+            {/* District/City */}
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>District</Text>
+              <View style={styles.inputContainer}>
+                <Feather
+                  name="map"
+                  size={20}
+                  color={COLORS.accent}
+                  style={styles.inputIcon}
+                />
+                <Dropdown
+                  style={styles.dropdown}
+                  selectedTextStyle={styles.dropdownText}
+                  data={cityList.map(item => ({label: item, value: item}))}
+                  labelField="label"
+                  valueField="value"
+                  placeholder="Select District"
+                  value={selectedCity}
+                  onChange={item => setSelectedCity(item.value)}
+                  placeholderStyle={styles.placeholderStyle}
+                  search
+                  searchPlaceholder="Search district..."
+                />
+              </View>
+            </View>
+
+            {/* Crop Selection with Type Ahead */}
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Crop Type</Text>
+              <View style={styles.inputContainer}>
+                <MaterialCommunityIcons
+                  name="sprout"
+                  size={20}
+                  color={COLORS.accent}
+                  style={styles.inputIcon}
+                />
+                <Dropdown
+                  style={styles.dropdown}
+                  selectedTextStyle={styles.dropdownText}
+                  data={crops
+                    .map(item => ({label: item, value: item}))
+                    .sort((a, b) => a.label.localeCompare(b.label))}
+                  labelField="label"
+                  valueField="value"
+                  placeholder="Select Crop"
+                  value={selectedCrop}
+                  onChange={item => {
+                    setSelectedCrop(item.value);
+                    setCropInput(''); // clear manual input if picking from dropdown
+                  }}
+                  placeholderStyle={styles.placeholderStyle}
+                  search
+                  searchPlaceholder="Search crop..."
+                />
+              </View>
+            </View>
+
+            {/* Manual Crop Input */}
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Or Type Custom Crop Name</Text>
+              <View style={styles.inputContainer}>
+                <MaterialCommunityIcons
+                  name="pencil"
+                  size={20}
+                  color={COLORS.accent}
+                  style={styles.inputIcon}
+                />
+                <TextInput
+                  style={styles.textInput}
+                  value={cropInput}
+                  onChangeText={text => {
+                    setCropInput(text);
+                    if (text.trim().length > 0) {
+                      setSelectedCrop('');
+                    }
+                  }}
+                  placeholder="E.g., Basmati Rice, Lady Finger"
+                  placeholderTextColor={COLORS.disabled}
+                />
+              </View>
+            </View>
+
+            {/* Year Selection */}
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Year</Text>
+              <View style={styles.inputContainer}>
+                <Feather
+                  name="calendar"
+                  size={20}
+                  color={COLORS.accent}
+                  style={styles.inputIcon}
+                />
+                <Dropdown
+                  style={styles.dropdown}
+                  selectedTextStyle={styles.dropdownText}
+                  data={yearData}
+                  labelField="label"
+                  valueField="value"
+                  placeholder="Select Year"
+                  value={selectedYear}
+                  onChange={item => setSelectedYear(item.value)}
+                  placeholderStyle={styles.placeholderStyle}
+                />
+              </View>
+            </View>
+          </View>
+
+          {/* Action Buttons */}
+          <View style={styles.actionButtons}>
+            <TouchableOpacity
+              style={[styles.button, styles.cancelButton]}
+              onPress={() => navigation.goBack()}>
+              <Text style={styles.buttonText}>Cancel</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.button, styles.generateButton]}
+              onPress={handleGenerateSchedule}>
+              <MaterialCommunityIcons
+                name="calendar-sync"
+                size={20}
+                color={COLORS.white}
+                style={{marginRight: 8}}
+              />
+              <Text style={styles.buttonText}>
+                {editingCrop ? 'Update Schedule' : 'Generate Schedule'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      )}
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
     backgroundColor: COLORS.background,
-    padding: SPACING.s,
-  },
-  scrollContent: {
-    padding: SPACING.m,
-    paddingBottom: SPACING.xxl,
   },
   header: {
-    fontSize: FONT_SIZES.h3,
-    fontWeight: FONT_WEIGHTS.bold,
-    color: COLORS.text,
-    marginBottom: SPACING.l,
-    textAlign: 'center',
-  },
-  formGroup: {
-    marginBottom: SPACING.m,
-  },
-  label: {
-    fontSize: FONT_SIZES.body,
-    color: COLORS.text,
-    fontWeight: FONT_WEIGHTS.medium,
-    marginBottom: SPACING.xs,
-  },
-  dropdown: {
-    height: 50,
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDERS.radiusMedium,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: Platform.OS === 'ios' ? 10 : 20,
+    paddingBottom: 15,
     paddingHorizontal: SPACING.m,
-    borderWidth: 1,
-    borderColor: COLORS.border,
   },
-  dropdownText: {
-    fontSize: FONT_SIZES.body,
-    color: COLORS.text,
-  },
-  placeholderStyle: {
-    fontSize: FONT_SIZES.body,
-    color: COLORS.textLight,
-  },
-  manualInput: {
-    marginTop: SPACING.xs,
-    fontSize: FONT_SIZES.body,
-    color: COLORS.text,
-    height: 50,
-  },
-  button: {
-    backgroundColor: COLORS.primary,
-    paddingVertical: SPACING.m,
-    paddingHorizontal: SPACING.xl,
-    borderRadius: BORDERS.radiusMedium,
-    marginTop: SPACING.m,
-    ...Platform.select({
-      ios: {
-        shadowColor: COLORS.black,
-        shadowOffset: {width: 0, height: 2},
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 2,
-      },
-    }),
-  },
-  buttonText: {
-    color: COLORS.white,
-    fontSize: FONT_SIZES.body,
+  headerTitle: {
+    fontSize: isTablet ? 24 : 20,
     fontWeight: FONT_WEIGHTS.bold,
+    color: COLORS.white,
     textAlign: 'center',
+  },
+  backButton: {
+    padding: 8,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: COLORS.background,
+    padding: SPACING.xl,
+  },
+  loadingText: {
+    fontSize: isTablet ? FONT_SIZES.h4 : FONT_SIZES.body,
+    fontWeight: FONT_WEIGHTS.medium,
+    color: COLORS.textLight,
+    marginTop: SPACING.m,
+    textAlign: 'center',
+  },
+  loadingSubtext: {
+    fontSize: isTablet ? FONT_SIZES.body : FONT_SIZES.caption,
+    color: COLORS.textLight,
+    marginTop: SPACING.s,
+    textAlign: 'center',
+    opacity: 0.8,
+  },
+  scrollContent: {
+    padding: SPACING.m,
+    paddingBottom: SPACING.xxl,
+  },
+  formContainer: {
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDERS.radiusMedium,
+    padding: SPACING.m,
+    marginBottom: SPACING.m,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  formGroup: {
+    marginBottom: SPACING.m,
+  },
+  label: {
+    fontSize: isTablet ? FONT_SIZES.body : FONT_SIZES.caption,
+    fontWeight: FONT_WEIGHTS.medium,
+    color: COLORS.textLight,
+    marginBottom: SPACING.xs,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.inputBackground,
+    borderRadius: BORDERS.radiusSmall,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  inputIcon: {
+    marginLeft: SPACING.s,
+    marginRight: SPACING.xs,
+  },
+  dropdown: {
+    flex: 1,
+    height: isTablet ? 50 : 45,
+    borderWidth: 0,
+    backgroundColor: 'transparent',
+  },
+  dropdownText: {
+    fontSize: isTablet ? FONT_SIZES.body : FONT_SIZES.small,
+    color: COLORS.text,
+  },
+  placeholderStyle: {
+    fontSize: isTablet ? FONT_SIZES.body : FONT_SIZES.small,
+    color: COLORS.disabled,
+  },
+  textInput: {
+    flex: 1,
+    height: isTablet ? 50 : 45,
+    paddingHorizontal: SPACING.s,
+    color: COLORS.text,
+    fontSize: isTablet ? FONT_SIZES.body : FONT_SIZES.small,
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: SPACING.m,
+  },
+  button: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: SPACING.s,
+    paddingHorizontal: SPACING.l,
+    borderRadius: BORDERS.radiusMedium,
+    flex: 1,
+    marginHorizontal: SPACING.xs,
+  },
+  cancelButton: {
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  generateButton: {
+    backgroundColor: COLORS.primary,
+    flex: 2,
+  },
+  buttonText: {
+    fontSize: isTablet ? FONT_SIZES.body : FONT_SIZES.small,
+    fontWeight: FONT_WEIGHTS.medium,
+    color: COLORS.white,
   },
 });
 

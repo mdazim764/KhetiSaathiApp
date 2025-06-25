@@ -1,4 +1,4 @@
-// src/screens/HomeScreen.js
+// src/screens/HomeScreen.js - Completely redesigned
 import React, {useState, useEffect} from 'react';
 import {
   View,
@@ -8,90 +8,32 @@ import {
   TouchableOpacity,
   StatusBar,
   ActivityIndicator,
-  Dimensions, // Import Dimensions
-  Platform, // Import Platform for specific styles if needed
+  Dimensions,
+  Platform,
+  Alert,
+  ImageBackground,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import moment from 'moment';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import Feather from 'react-native-vector-icons/Feather';
+import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 import theme from '../constants/theme';
-// Removed unused imports: Geolocation, request, PERMISSIONS, RESULTS
 import {getStoredLocation} from '../utils/locationUtils';
-
-import dayjs from 'dayjs';
 import {addTestCropData} from '../utils/addTestCrop';
-
 import env from '../config/env';
+import appConfig from '../config/appConfig';
+import LinearGradient from 'react-native-linear-gradient';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
-// Function to add test crop data
-// This function is used to add a test crop schedule for testing purposes.
-// async function addTestCropData() {
-//   const today = dayjs().format('YYYY-MM-DD');
-//   // Let's assume the schedule covers today for testing purposes.
-//   const testCrop = {
-//     crop_name: 'Test Crop',
-//     country: 'India',
-//     state: 'Test State',
-//     district: 'Test District',
-//     soil_type: 'Test Soil',
-//     climate_condition: 'Test Climate',
-//     year: parseInt(dayjs().format('YYYY')),
-//     // Schedule fields - ensure one task (or more) covers today's date.
-//     land_preparation_start: today.add(1, 'day').format('YYYY-MM-DD'),
-//     land_preparation_end: today.add(2, 'day').format('YYYY-MM-DD'),
-//     sowing_start: today.add(3, 'day').format('YYYY-MM-DD'),
-//     sowing_end: today.add(4, 'day').format('YYYY-MM-DD'),
-//     fertilization_1: today.add(5, 'day').format('YYYY-MM-DD'),
-//     fertilization_2: 'NA',
-//     irrigation_start: today.add(6, 'day').format('YYYY-MM-DD'),
-//     irrigation_end: today.add(7, 'day').format('YYYY-MM-DD'),
-//     weeding_1: today.add(8, 'day').format('YYYY-MM-DD'),
-//     weeding_2: 'NA',
-//     pest_control_1: today.add(9, 'day').format('YYYY-MM-DD'),
-//     pest_control_2: 'NA',
-//     harvesting_start: today.add(10, 'day').format('YYYY-MM-DD'),
-//     harvesting_end: today.add(11, 'day').format('YYYY-MM-DD'),
-//     // Optionally add a "schedule" array if your app expects an array of tasks:
-//     schedule: [
-//       {
-//         task: 'Land Preparation',
-//         startDate: today.add(1, 'day').format('YYYY-MM-DD'),
-//         endDate: today.add(2, 'day').format('YYYY-MM-DD'),
-//       },
-//       {
-//         task: 'Sowing',
-//         startDate: today.add(3, 'day').format('YYYY-MM-DD'),
-//         endDate: today.add(4, 'day').format('YYYY-MM-DD'),
-//       },
-//       {task: 'Irrigation', startDate: today, endDate: today},
-//       // ...add other tasks as needed
-//     ],
-//     uniqueId: Date.now().toString(),
-//   };
-
-//   try {
-//     // Get existing crops
-//     const storedStr = await AsyncStorage.getItem('crops');
-//     const oldCrops = storedStr ? JSON.parse(storedStr) : [];
-//     // Append the test crop
-//     const updated = [...oldCrops, testCrop];
-//     await AsyncStorage.setItem('crops', JSON.stringify(updated));
-//     console.log('Test crop schedule added.');
-//   } catch (error) {
-//     console.error('Error adding test crop schedule:', error);
-//   }
-// }
-
+// Destructure theme constants
 const {COLORS, FONT_SIZES, FONT_WEIGHTS, SPACING, BORDERS} = theme;
-const {width} = Dimensions.get('window'); // Get current window width
-
-// Define a breakpoint for tablet view (adjust as needed)
-const TABLET_BREAKPOINT = 600; // Example: screens wider than 600dp are treated as tablets
-
+const {width} = Dimensions.get('window');
+const TABLET_BREAKPOINT = 600;
 const isTablet = width >= TABLET_BREAKPOINT;
 
 const HomeScreen = ({navigation}) => {
+  // Keep the same state variables
   const [upcomingTasks, setUpcomingTasks] = useState([]);
   const [todaysTasks, setTodaysTasks] = useState([]);
   const [recentNotifications, setRecentNotifications] = useState([]);
@@ -101,15 +43,26 @@ const HomeScreen = ({navigation}) => {
   const [impactsLoading, setImpactsLoading] = useState(true);
   const [expertRecommendation, setExpertRecommendation] = useState(null);
   const [recommendationLoading, setRecommendationLoading] = useState(true);
-  const [locationName, setLocationName] = useState('Fetching Location...');
-  const [date] = useState(moment().format('MMMM D,YYYY')); // Use useState with initial value, date doesn't need to change
+  const [locationName, setLocationName] = useState('Scanning Location...');
+  const [date] = useState(moment().format('MMMM D, YYYY'));
   const [latestCrop, setLatestCrop] = useState(null);
 
+  // Keep same data fetching logic
   useEffect(() => {
     loadHomePageData();
   }, []);
 
+  // Keep existing functions but just update UI rendering and styles
+
+  const getGreeting = () => {
+    const hour = parseInt(moment().format('HH'));
+    if (hour < 12) return 'Good Morning';
+    if (hour < 17) return 'Good Afternoon';
+    return 'Good Evening';
+  };
+
   const loadHomePageData = async () => {
+    // Keep the same implementation
     const storedLocation = await getStoredLocation();
     if (storedLocation) {
       console.log('HomeScreen using stored location:', storedLocation);
@@ -118,11 +71,9 @@ const HomeScreen = ({navigation}) => {
         storedLocation.longitude,
       );
     } else {
-      setLocationName('Location Unavailable (Initial)');
+      setLocationName('Location Unavailable');
       setWeatherLoading(false);
       console.log('No stored location available in HomeScreen.');
-      // Optionally, you could trigger a fresh location fetch here if absolutely needed
-      // but the App.tsx should have already tried.
     }
     await loadUpcomingTasksSnapshot();
     await loadRecentNotificationsSnapshot();
@@ -130,8 +81,8 @@ const HomeScreen = ({navigation}) => {
     await fetchExpertRecommendationSnapshot();
     await fetchLatestCrop();
   };
+
   //function for decoding coordinates to city name
-  // This function uses the Nominatim API to reverse geocode coordinates to a city name for current name..
   const getCityNameFromCoordinates = async (latitude, longitude) => {
     const apiUrl = `${env.NOMINATIM_API_BASE}/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}&accept-language=en`;
 
@@ -139,7 +90,7 @@ const HomeScreen = ({navigation}) => {
       // Add user agent and proper headers to avoid rate limiting
       const response = await fetch(apiUrl, {
         headers: {
-          'User-Agent': 'CropCalendarApp/1.0',
+          'User-Agent': 'KhetiSaathi/1.0',
           Accept: 'application/json',
         },
       });
@@ -241,7 +192,7 @@ const HomeScreen = ({navigation}) => {
       console.error('Error fetching latest crop:', error);
       setLatestCrop(null);
     }
-  }; // Added `entering={FadeIn}` for animation
+  };
 
   // Extracted Crop Card into its own component for cleanliness
   const LatestCropCardContent = ({crop}) => {
@@ -253,7 +204,7 @@ const HomeScreen = ({navigation}) => {
     const year =
       crop.year !== 'NA' && crop.year !== ''
         ? crop.year || crop.crop_year || 'N/A'
-        : 'N/A'; // Improved year check
+        : 'N/A';
 
     return (
       <>
@@ -264,7 +215,7 @@ const HomeScreen = ({navigation}) => {
             color={COLORS.primary}
           />
           <Text style={[styles.cardTitle, isTablet && styles.cardTitleTablet]}>
-            Latest Crop Added  
+            Latest Crop Added
           </Text>
         </View>
         <View style={styles.listItem}>
@@ -307,7 +258,7 @@ const HomeScreen = ({navigation}) => {
       </View>
       <View style={styles.emptyCardContent}>
         <MaterialCommunityIcons
-          name="calendar-plus" // Icon for adding
+          name="calendar-plus"
           size={isTablet ? 60 : 50}
           color={COLORS.disabled}
           style={styles.emptyCardIcon}
@@ -317,15 +268,12 @@ const HomeScreen = ({navigation}) => {
           style={styles.emptyCardButton}
           onPress={() =>
             navigation.navigate('HomeTab', {screen: 'GenerateCrop'})
-          } // Navigate to GenerateCrop
-        >
+          }>
           <Text style={styles.emptyCardButtonText}>Generate Schedule</Text>
         </TouchableOpacity>
       </View>
     </>
   );
-
-  // --- Corrected loadUpcomingTasksSnapshot function ---
 
   const loadUpcomingTasksSnapshot = async () => {
     try {
@@ -423,7 +371,6 @@ const HomeScreen = ({navigation}) => {
     }
   };
 
-  // --- End Corrected loadUpcomingTasksSnapshot function ---
   const loadRecentNotificationsSnapshot = async () => {
     try {
       const storedNotifications = await AsyncStorage.getItem(
@@ -543,406 +490,460 @@ const HomeScreen = ({navigation}) => {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
-        {/* App Header */}
-        <View style={styles.appHeaderContainer}>
-          <View style={styles.appHeader}>
-            <Text style={styles.title}>Crop🍃 Calendar</Text>
-            <Text style={styles.subtitle}>Your Farming Companion</Text>
-          </View>
+      <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
+
+      {/* App Header - Completely redesigned */}
+      <LinearGradient
+        colors={[COLORS.primaryDark, COLORS.primary, COLORS.primaryLight]}
+        start={{x: 0, y: 0}}
+        end={{x: 1, y: 0}}
+        style={styles.headerGradient}>
+        <View style={styles.appHeader}>
+          <Text style={styles.title}>
+            {appConfig.appName}{' '}
+            <Text style={styles.titleEmoji}>{appConfig.appEmoji}</Text>
+          </Text>
+          <Text style={styles.subtitle}>{appConfig.appTagline}</Text>
         </View>
-        {/* Top Section - Greeting, Date, Location, Weather Brief */}
-        <View style={[styles.header, isTablet && styles.headerTablet]}>
-          <Text style={styles.greeting}>
-            {moment().format('HH') < 12
-              ? 'Good Morning'
-              : moment().format('HH') < 17
-              ? 'Good Afternoon'
-              : 'Good Evening'}
-          </Text>
-          <Text style={styles.dateLocation}>
-            <Text>{date}</Text>
-            <Text> | </Text>
-            <Text>{locationName}</Text>
-          </Text>
+      </LinearGradient>
+
+      <ScrollView
+        contentContainerStyle={styles.scrollContainer}
+        showsVerticalScrollIndicator={false}>
+        {/* User greeting card */}
+        <View style={styles.greetingCard}>
+          <View>
+            <Text style={styles.greeting}>{getGreeting()}</Text>
+            <Text style={styles.dateLocation}>
+              <Feather name="calendar" size={14} color={COLORS.accent} /> {date}
+            </Text>
+            <Text style={styles.dateLocation}>
+              <Feather name="map-pin" size={14} color={COLORS.accent} />{' '}
+              {locationName}
+            </Text>
+          </View>
+
+          {/* Weather info */}
           <View style={styles.weatherBrief}>
             {!weatherLoading && weather?.current ? (
-              <>
-                <MaterialCommunityIcons
+              <View style={styles.weatherData}>
+                <Feather
                   name={
                     weather?.current?.condition?.icon?.includes('night')
-                      ? 'weather-night'
-                      : 'weather-sunny'
+                      ? 'moon'
+                      : 'sun'
                   }
-                  size={isTablet ? FONT_SIZES.h3 : 24} // Adjust icon size on tablet
-                  color={COLORS.primary}
+                  size={isTablet ? 36 : 28}
+                  color={COLORS.secondary}
                 />
-                <Text
-                  style={[
-                    styles.temperature,
-                    isTablet && styles.temperatureTablet,
-                  ]}>
+                <Text style={styles.temperature}>
                   {weather?.current?.temp_c}°C
-                </Text>
-              </>
-            ) : weatherLoading ? (
-              <ActivityIndicator size="small" color={COLORS.primary} />
-            ) : (
-              <Text style={styles.weatherBriefUnavailableText}>N/A</Text>
-            )}
-          </View>
-        </View>
-        {/* Content Area - Cards */}
-        <View
-          style={[styles.contentArea, isTablet && styles.contentAreaTablet]}>
-          <View style={styles.card}>
-            {latestCrop ? (
-              <LatestCropCardContent crop={latestCrop} />
-            ) : (
-              <EmptyCropCardContent />
-            )}
-          </View>
-          {/* Today's Tasks Card - Added `entering={FadeIn}` for animation */}
-          {todaysTasks.length > 0 && (
-            <View style={styles.card}>
-              <View style={styles.cardHeader}>
-                <MaterialIcons
-                  name="today"
-                  size={isTablet ? FONT_SIZES.h4 : 20}
-                  color={COLORS.primary}
-                />
-                <Text
-                  style={[
-                    styles.cardTitle,
-                    isTablet && styles.cardTitleTablet,
-                  ]}>
-                  Today's Tasks
-                </Text>
-              </View>
-              {todaysTasks.map(task => (
-                <View key={task.id} style={styles.listItem}>
-                  <Text style={styles.listItemText}>
-                    <Text>
-                      {task.task} - {moment(task.date).format('DD-MM-YYYY')}
-                    </Text>
-                  </Text>
-                  <Text style={styles.listItemSubText}>
-                    <Text>({task.cropName})</Text>
-                  </Text>
-                </View>
-              ))}
-            </View>
-          )}
-          {/* Upcoming Tasks Card - Added `entering={FadeIn}` for animation */}
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <MaterialIcons
-                name="agriculture"
-                size={isTablet ? FONT_SIZES.h4 : 20} // Adjust size
-                color={COLORS.primary}
-              />
-              <Text
-                style={[styles.cardTitle, isTablet && styles.cardTitleTablet]}>
-                Upcoming Tasks
-              </Text>
-            </View>
-            {upcomingTasks.length > 0 ? (
-              upcomingTasks.map(task => (
-                <View key={task.id} style={styles.listItem}>
-                  <Text style={styles.listItemText}>
-                    {task.task} - {moment(task.date).format('DD-MM-YYYY')}
-                  </Text>
-                  <Text style={styles.listItemSubText}>
-                    <Text>({task.cropName})</Text>
-                  </Text>
-                </View>
-              ))
-            ) : (
-              <Text style={styles.emptyText}>
-                No upcoming tasks in the next 30 days.
-              </Text>
-            )}
-            <TouchableOpacity
-              style={styles.viewAllButton}
-              onPress={() =>
-                navigation.navigate('TasksTab', {screen: 'UpcomingTasks'})
-              }>
-              <Text style={styles.viewAllText}>View All Tasks</Text>
-            </TouchableOpacity>
-          </View>
-          {/* Recent Notifications Card - Added `entering={FadeIn}` for animation */}
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <MaterialCommunityIcons
-                name="bell-outline"
-                size={isTablet ? FONT_SIZES.h4 : 20} // Adjust size
-                color={COLORS.primary}
-              />
-              <Text
-                style={[styles.cardTitle, isTablet && styles.cardTitleTablet]}>
-                Recent Notifications
-              </Text>
-            </View>
-            {recentNotifications.length > 0 ? (
-              recentNotifications.map(notification => (
-                <TouchableOpacity
-                  key={notification.id}
-                  style={styles.listItem}
-                  onPress={() =>
-                    navigation.navigate('NotificationsTab', {
-                      screen: 'Notifications',
-                    })
-                  }>
-                  <Text style={styles.listItemText}>
-                    <Text>{notification.title}</Text>
-                  </Text>
-                  <Text style={styles.listItemSubText}>
-                    <Text>{moment(notification.timestamp).fromNow()}</Text>
-                  </Text>
-                </TouchableOpacity>
-              ))
-            ) : (
-              <Text style={styles.emptyText}>
-                No recent unread notifications.
-              </Text>
-            )}
-            <TouchableOpacity
-              style={styles.viewAllButton}
-              onPress={() =>
-                navigation.navigate('NotificationsTab', {
-                  screen: 'Notifications',
-                })
-              }>
-              <Text style={styles.viewAllText}>View All Notifications</Text>
-            </TouchableOpacity>
-          </View>
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <MaterialCommunityIcons
-                name="weather-cloudy"
-                size={isTablet ? FONT_SIZES.h4 : 20} // Adjust size
-                color={COLORS.primary}
-              />
-              <Text
-                style={[styles.cardTitle, isTablet && styles.cardTitleTablet]}>
-                Weather Update
-              </Text>
-            </View>
-            {!weatherLoading && weather?.current ? (
-              <View style={styles.weatherInfo}>
-                <Text style={styles.weatherCondition}>
-                  {weather?.current?.condition?.text}
-                  {weather?.current?.temp_c}°C
-                </Text>
-                <Text style={styles.weatherHumidity}>
-                  Humidity: {weather?.current?.humidity}%
                 </Text>
               </View>
             ) : weatherLoading ? (
-              <ActivityIndicator
-                style={styles.loadingIndicator}
-                size="small"
-                color={COLORS.primary}
-              />
+              <ActivityIndicator size="small" color={COLORS.secondary} />
             ) : (
-              <Text style={styles.emptyText}>Weather data unavailable.</Text>
-            )}
-            <View style={styles.impactsContainer}>
-              <Text style={styles.impactsTitle}>Today's Impact:</Text>
-              {impactsLoading ? (
-                <ActivityIndicator
-                  style={styles.loadingIndicator}
-                  size="small"
-                  color={COLORS.primary}
-                />
-              ) : weatherImpacts.length > 0 && weatherImpacts[0] ? (
-                <Text style={styles.impactText}>
-                  <Text>{weatherImpacts[0]}</Text>
-                </Text>
-              ) : (
-                <Text style={styles.emptyText}>
-                  No significant weather impacts detected.
-                </Text>
-              )}
-            </View>
-          </View>
-          {/* Expert Recommendation Card - Added `entering={FadeIn}` for animation */}
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <MaterialCommunityIcons
-                name="lightbulb-outline"
-                size={isTablet ? FONT_SIZES.h4 : 20} // Adjust size
-                color={COLORS.primary}
-              />
-              <Text
-                style={[styles.cardTitle, isTablet && styles.cardTitleTablet]}>
-                Expert Recommendation
-              </Text>
-            </View>
-            {recommendationLoading ? (
-              <ActivityIndicator
-                style={styles.loadingIndicator}
-                size="small"
-                color={COLORS.primary}
-              />
-            ) : expertRecommendation?.tip ? (
-              <Text style={styles.recommendationText}>
-                <Text>{expertRecommendation.tip}</Text>
-              </Text>
-            ) : (
-              <Text style={styles.emptyText}>
-                No expert recommendations available right now.
-              </Text>
+              <Text style={styles.weatherUnavailable}>Weather N/A</Text>
             )}
           </View>
         </View>
 
-        <View style={styles.testButtonContainer}>
-          {/* Add a container for potentially multiple test buttons */}
+        {/* Content Area - Cards with brand new design */}
+        <View style={styles.cardsContainer}>
+          {/* Latest Crop Card */}
           <TouchableOpacity
-            style={styles.testButton}
-            onPress={async () => {
-              await addTestCropData();
-              // Optional: Reload data after adding the test crop so it appears
-              // This might involve calling your loadHomePageData function or parts of it
-              // Or trigger a navigation event that causes a reload.
-              // Example:
-              // loadHomePageData();
-              // Or maybe just loadLatestCrop() and loadUpcomingTasksSnapshot() if faster
-              // For simplicity during testing, a full reload might be easiest:
-              // navigation.replace('HomeTab', {screen: 'Home'}); // Replace the current screen
-              // Or you could use an Alert:
-              // Alert.alert('Test Data Added', 'Sequential test crop schedule added. Restart the app or navigate away and back to see changes.');
-            }}>
-            <Text style={styles.testButtonText}>Add Sequential Test Crop</Text>
+            style={styles.card}
+            onPress={() =>
+              navigation.navigate('CropsTab', {screen: 'CropList'})
+            }>
+            <View style={styles.cardHeader}>
+              <MaterialCommunityIcons
+                name="sprout"
+                size={16}
+                color={COLORS.accent}
+              />
+              <Text style={styles.cardTitle}>Farm Activity</Text>
+            </View>
+
+            {latestCrop ? (
+              <View style={styles.cropContent}>
+                <Text style={styles.cropName}>
+                  {latestCrop.crop_name || latestCrop.crop || 'Unknown Crop'}
+                </Text>
+                <Text style={styles.cropLocation}>
+                  {latestCrop.state && latestCrop.district
+                    ? `${latestCrop.district}, ${latestCrop.state}`
+                    : latestCrop.state ||
+                      latestCrop.district ||
+                      'Location unknown'}
+                </Text>
+                <View style={styles.viewAllButton}>
+                  <Text style={styles.viewAllText}>All Crops</Text>
+                  <Feather
+                    name="chevron-right"
+                    size={14}
+                    color={COLORS.secondary}
+                  />
+                </View>
+              </View>
+            ) : (
+              <View style={styles.emptyCropContent}>
+                <MaterialCommunityIcons
+                  name="plus-circle"
+                  size={28}
+                  color={COLORS.disabled}
+                />
+                <Text style={styles.emptyText}>
+                  Create your first crop schedule
+                </Text>
+                <TouchableOpacity
+                  style={styles.addButton}
+                  onPress={() =>
+                    navigation.navigate('HomeTab', {screen: 'GenerateCrop'})
+                  }>
+                  <Text style={styles.addButtonText}>Get Started</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </TouchableOpacity>
-          {/* Add clear test data button here if needed */}
-          {/*
-     <TouchableOpacity
-        style={[styles.testButton, styles.clearButton]}
-        onPress={async () => {
-           await clearTestData();
-           navigation.replace('HomeTab', { screen: 'Home' }); // Reload
-        }}
-     >
-       <Text style={styles.testButtonText}>Clear Test Data</Text>
-     </TouchableOpacity>
-    */}
+
+          {/* Today's Tasks Card */}
+          {todaysTasks.length > 0 && (
+            <TouchableOpacity
+              style={styles.card}
+              onPress={() =>
+                navigation.navigate('TasksTab', {screen: 'UpcomingTasks'})
+              }>
+              <View style={styles.cardHeader}>
+                <Feather name="check-square" size={16} color={COLORS.accent} />
+                <Text style={styles.cardTitle}>Today's Tasks</Text>
+              </View>
+
+              <View style={styles.tasksList}>
+                {todaysTasks.slice(0, 2).map(task => (
+                  <View key={task.id} style={styles.taskItem}>
+                    <View style={styles.taskDot} />
+                    <View style={styles.taskDetails}>
+                      <Text style={styles.taskName}>{task.task}</Text>
+                      <Text style={styles.taskCrop}>{task.cropName}</Text>
+                    </View>
+                  </View>
+                ))}
+
+                <View style={styles.viewAllButton}>
+                  <Text style={styles.viewAllText}>All Tasks</Text>
+                  <Feather
+                    name="chevron-right"
+                    size={14}
+                    color={COLORS.secondary}
+                  />
+                </View>
+              </View>
+            </TouchableOpacity>
+          )}
+
+          {/* Upcoming Tasks Card */}
+          <TouchableOpacity
+            style={styles.card}
+            onPress={() =>
+              navigation.navigate('TasksTab', {screen: 'UpcomingTasks'})
+            }>
+            <View style={styles.cardHeader}>
+              <Feather name="calendar" size={16} color={COLORS.accent} />
+              <Text style={styles.cardTitle}>Upcoming Tasks</Text>
+            </View>
+
+            {upcomingTasks.length > 0 ? (
+              <View style={styles.tasksList}>
+                {upcomingTasks.map(task => (
+                  <View key={task.id} style={styles.taskItem}>
+                    <View style={styles.taskDot} />
+                    <View style={styles.taskDetails}>
+                      <Text style={styles.taskName}>{task.task}</Text>
+                      <Text style={styles.taskDate}>
+                        {moment(task.date).format('MMM D')}
+                      </Text>
+                    </View>
+                  </View>
+                ))}
+
+                <View style={styles.viewAllButton}>
+                  <Text style={styles.viewAllText}>Calendar View</Text>
+                  <Feather
+                    name="chevron-right"
+                    size={14}
+                    color={COLORS.secondary}
+                  />
+                </View>
+              </View>
+            ) : (
+              <View style={styles.emptyContent}>
+                <Feather name="calendar" size={28} color={COLORS.disabled} />
+                <Text style={styles.emptyText}>No upcoming tasks</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+
+          {/* Notifications Card */}
+          <TouchableOpacity
+            style={styles.card}
+            onPress={() =>
+              navigation.navigate('NotificationsTab', {screen: 'Notifications'})
+            }>
+            <View style={styles.cardHeader}>
+              <Feather name="bell" size={16} color={COLORS.accent} />
+              <Text style={styles.cardTitle}>Notifications</Text>
+              {recentNotifications.length > 0 && (
+                <View style={styles.notifBadge}>
+                  <Text style={styles.notifBadgeText}>
+                    {recentNotifications.length}
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            {recentNotifications.length > 0 ? (
+              <View style={styles.notificationsList}>
+                {recentNotifications.map(notification => (
+                  <View key={notification.id} style={styles.notificationItem}>
+                    <View style={styles.notifDot} />
+                    <View style={styles.notifDetails}>
+                      <Text style={styles.notifTitle}>
+                        {notification.title}
+                      </Text>
+                      <Text style={styles.notifTime}>
+                        {moment(notification.timestamp).fromNow()}
+                      </Text>
+                    </View>
+                  </View>
+                ))}
+
+                <View style={styles.viewAllButton}>
+                  <Text style={styles.viewAllText}>All Notifications</Text>
+                  <Feather
+                    name="chevron-right"
+                    size={14}
+                    color={COLORS.secondary}
+                  />
+                </View>
+              </View>
+            ) : (
+              <View style={styles.emptyContent}>
+                <Feather name="bell-off" size={28} color={COLORS.disabled} />
+                <Text style={styles.emptyText}>No new notifications</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+
+          {/* Weather and Impacts Card */}
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <Feather name="cloud" size={16} color={COLORS.accent} />
+              <Text style={styles.cardTitle}>Weather Update</Text>
+            </View>
+
+            {!weatherLoading && weather?.current ? (
+              <View style={styles.weatherContent}>
+                <View style={styles.weatherRow}>
+                  <Text style={styles.weatherCondition}>
+                    {weather?.current?.condition?.text}
+                  </Text>
+                  <Text style={styles.weatherTemp}>
+                    {weather?.current?.temp_c}°C
+                  </Text>
+                </View>
+
+                <View style={styles.weatherDetails}>
+                  <View style={styles.weatherDetail}>
+                    <Feather
+                      name="droplet"
+                      size={14}
+                      color={COLORS.textLight}
+                    />
+                    <Text style={styles.weatherDetailText}>
+                      {weather?.current?.humidity}%
+                    </Text>
+                  </View>
+
+                  <View style={styles.weatherDetail}>
+                    <Feather name="wind" size={14} color={COLORS.textLight} />
+                    <Text style={styles.weatherDetailText}>
+                      {weather?.current?.wind_kph} km/h
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.impactsSection}>
+                  <Text style={styles.impactsTitle}>Farm Impact:</Text>
+                  {!impactsLoading &&
+                  weatherImpacts.length > 0 &&
+                  weatherImpacts[0] ? (
+                    <Text style={styles.impactText}>{weatherImpacts[0]}</Text>
+                  ) : (
+                    <Text style={styles.noImpactText}>
+                      No significant weather impacts detected
+                    </Text>
+                  )}
+                </View>
+              </View>
+            ) : (
+              <View style={styles.emptyContent}>
+                <Feather name="cloud-off" size={28} color={COLORS.disabled} />
+                <Text style={styles.emptyText}>Weather data unavailable</Text>
+              </View>
+            )}
+          </View>
+
+          {/* Expert Recommendations Card */}
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <Feather name="zap" size={16} color={COLORS.accent} />
+              <Text style={styles.cardTitle}>Smart Insights</Text>
+            </View>
+
+            {!recommendationLoading && expertRecommendation?.tip ? (
+              <View style={styles.recommendationContent}>
+                <MaterialCommunityIcons
+                  name="lightbulb-on"
+                  size={16}
+                  color={COLORS.secondary}
+                />
+                <Text style={styles.recommendationText}>
+                  {expertRecommendation.tip}
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.emptyContent}>
+                <MaterialCommunityIcons
+                  name="lightbulb-off"
+                  size={28}
+                  color={COLORS.disabled}
+                />
+                <Text style={styles.emptyText}>No insights available</Text>
+              </View>
+            )}
+          </View>
         </View>
+
+        {/* Test Button */}
+        <TouchableOpacity
+          style={styles.testButton}
+          onPress={async () => {
+            await addTestCropData();
+            Alert.alert(
+              'Test Data Added',
+              'Test data added successfully. Pull to refresh or navigate to see changes.',
+              [
+                {
+                  text: 'OK',
+                  onPress: () => loadHomePageData(),
+                },
+              ],
+            );
+          }}>
+          <Feather name="database" size={18} color={COLORS.white} />
+          <Text style={styles.testButtonText}>Load Test Data</Text>
+        </TouchableOpacity>
       </ScrollView>
     </View>
   );
 };
 
+// Brand new styling with dark theme
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  scrollContainer: {
-    // Use padding from theme, can be adjusted for tablet in parent View
-    paddingBottom: SPACING.m,
-    paddingTop: SPACING.m,
-  },
-  // New container to manage padding on wide screens
-  appHeaderContainer: {
-    paddingHorizontal: isTablet ? SPACING.xxl : SPACING.m, // Increased horizontal padding for tablets
+  headerGradient: {
+    paddingTop: Platform.OS === 'ios' ? 50 : 20,
+    paddingBottom: 20,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
   },
   appHeader: {
     alignItems: 'center',
-    marginTop: SPACING.m,
-    padding: SPACING.m, // Keep internal padding consistent
+    paddingHorizontal: SPACING.m,
   },
   title: {
-    fontSize: isTablet ? FONT_SIZES.h1 * 1.2 : FONT_SIZES.h2, // Larger title on tablet
+    fontSize: isTablet ? 38 : 32,
     fontWeight: FONT_WEIGHTS.bold,
-    color: COLORS.text,
-    marginBottom: SPACING.xs,
-    textAlign: 'center',
+    color: COLORS.white,
+    marginBottom: 6,
+  },
+  titleEmoji: {
+    fontSize: isTablet ? 34 : 28,
   },
   subtitle: {
-    fontSize: isTablet ? FONT_SIZES.h4 : FONT_SIZES.body, // Larger subtitle on tablet
-    fontWeight: FONT_WEIGHTS.regular,
-    color: COLORS.textLight,
-    textAlign: 'center',
-    marginBottom: SPACING.l,
+    fontSize: isTablet ? FONT_SIZES.h4 : FONT_SIZES.body,
+    fontWeight: FONT_WEIGHTS.light,
+    color: 'rgba(255,255,255,0.85)',
+    letterSpacing: 0.5,
   },
-  header: {
-    padding: SPACING.l,
+  scrollContainer: {
+    paddingBottom: SPACING.xl,
+  },
+  greetingCard: {
     backgroundColor: COLORS.surface,
+    margin: SPACING.m,
+    padding: SPACING.m,
     borderRadius: BORDERS.radiusMedium,
-    marginBottom: SPACING.m,
-    elevation: 1,
-    marginHorizontal: isTablet ? SPACING.xxl : SPACING.m, // Increased horizontal margin for tablets
-  },
-  headerTablet: {
-    flexDirection: 'row', // Row layout for header content on tablet
+    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 8,
   },
   greeting: {
-    fontSize: isTablet ? FONT_SIZES.h3 : FONT_SIZES.h5, // Larger greeting on tablet
+    fontSize: isTablet ? FONT_SIZES.h3 : FONT_SIZES.h4,
     fontWeight: FONT_WEIGHTS.bold,
-    color: COLORS.text,
-    flexShrink: 1, // Allow text to wrap
+    color: COLORS.white,
+    marginBottom: 8,
   },
   dateLocation: {
-    fontSize: isTablet ? FONT_SIZES.body : FONT_SIZES.caption, // Larger date/location on tablet
+    fontSize: FONT_SIZES.caption,
     color: COLORS.textLight,
-    marginTop: isTablet ? 0 : SPACING.xs, // Adjust margin based on layout
-    marginLeft: isTablet ? SPACING.m : 0, // Add margin in row layout
-    flexShrink: 1, // Allow text to wrap
-  },
-  weatherBrief: {
+    marginBottom: 4,
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: SPACING.s,
-    // Adjust margin/layout for tablet row layout
-    ...Platform.select({
-      android: {marginTop: SPACING.s}, // Keep original margin on Android phone
-      ios: {marginTop: SPACING.s}, // Keep original margin on iOS phone
-      default: {
-        // Default for larger screens/web
-        marginTop: isTablet ? 0 : SPACING.s,
-        marginLeft: isTablet ? SPACING.m : 0,
-      },
-    }),
+  },
+  weatherBrief: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.primaryDark,
+    paddingHorizontal: SPACING.m,
+    paddingVertical: SPACING.s,
+    borderRadius: BORDERS.radiusMedium,
+  },
+  weatherData: {
+    alignItems: 'center',
   },
   temperature: {
-    fontSize: isTablet ? FONT_SIZES.h4 : FONT_SIZES.body, // Larger temperature on tablet
-    color: COLORS.primary,
-    marginLeft: SPACING.s,
+    fontSize: FONT_SIZES.h4,
+    fontWeight: FONT_WEIGHTS.bold,
+    color: COLORS.white,
+    marginTop: 4,
   },
-  weatherBriefUnavailableText: {
-    // Style for N/A text in weather brief
-    fontSize: isTablet ? FONT_SIZES.body : FONT_SIZES.caption,
+  weatherUnavailable: {
+    fontSize: FONT_SIZES.small,
     color: COLORS.textLight,
   },
-  cropDetails: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: SPACING.xs,
-    // Use flexWrap to prevent overflow on narrow screens
-    flexWrap: 'wrap',
+  cardsContainer: {
+    paddingHorizontal: SPACING.m,
   },
-  // cropName style is defined implicitly via listItemText bold
   card: {
     backgroundColor: COLORS.surface,
     borderRadius: BORDERS.radiusMedium,
     padding: SPACING.m,
     marginBottom: SPACING.m,
-    elevation: 1,
-    // Make cards take less width on larger screens
-    width: isTablet ? '48%' : '100%', // Two cards per row on tablet approx.
-    marginHorizontal: isTablet ? SPACING.s / 2 : 0, // Add horizontal margin for grid
-  },
-  // New container for the content area to enable grid layout on tablet
-  contentArea: {
-    flexDirection: isTablet ? 'row' : 'column', // Row direction on tablet
-    flexWrap: isTablet ? 'wrap' : 'nowrap', // Wrap items on tablet
-    justifyContent: isTablet ? 'space-between' : 'flex-start', // Space between cards
-    paddingHorizontal: isTablet ? SPACING.xxl : SPACING.m, // Increased horizontal padding for tablets
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -950,108 +951,232 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.s,
   },
   cardTitle: {
-    fontSize: isTablet ? FONT_SIZES.h5 : FONT_SIZES.h6, // Larger card title on tablet
-    fontWeight: FONT_WEIGHTS.bold,
-    color: COLORS.text,
+    fontSize: FONT_SIZES.body,
+    fontWeight: FONT_WEIGHTS.medium,
+    color: COLORS.white,
     marginLeft: SPACING.s,
+    flex: 1,
   },
-  cardTitleTablet: {
-    // Specific tablet adjustments if needed, e.g., different font weight
+  cropContent: {
+    marginTop: SPACING.s,
   },
-  listItem: {
+  cropName: {
+    fontSize: FONT_SIZES.h4,
+    fontWeight: FONT_WEIGHTS.bold,
+    color: COLORS.white,
+    marginBottom: 4,
+  },
+  cropLocation: {
+    fontSize: FONT_SIZES.caption,
+    color: COLORS.textLight,
+    marginBottom: SPACING.s,
+  },
+  emptyCropContent: {
+    alignItems: 'center',
+    padding: SPACING.m,
+    marginVertical: SPACING.s,
+  },
+  tasksList: {
+    marginTop: SPACING.s,
+  },
+  taskItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: SPACING.s,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: 'rgba(255,255,255,0.1)',
   },
-  listItemText: {
-    fontSize: isTablet ? FONT_SIZES.body : FONT_SIZES.body, // Keep same or adjust
-    color: COLORS.text,
+  taskDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: COLORS.secondary,
+    marginRight: SPACING.s,
   },
-  listItemSubText: {
-    fontSize: isTablet ? FONT_SIZES.caption : FONT_SIZES.caption, // Keep same or adjust
+  taskDetails: {
+    flex: 1,
+  },
+  taskName: {
+    fontSize: FONT_SIZES.body,
+    fontWeight: FONT_WEIGHTS.medium,
+    color: COLORS.white,
+    marginBottom: 2,
+  },
+  taskCrop: {
+    fontSize: FONT_SIZES.small,
     color: COLORS.textLight,
+  },
+  taskDate: {
+    fontSize: FONT_SIZES.small,
+    color: COLORS.accent,
   },
   viewAllButton: {
-    paddingVertical: SPACING.s,
-    alignItems: 'flex-end',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    marginTop: SPACING.s,
   },
   viewAllText: {
-    color: COLORS.primary,
+    fontSize: FONT_SIZES.small,
     fontWeight: FONT_WEIGHTS.medium,
-    fontSize: isTablet ? FONT_SIZES.caption : FONT_SIZES.small, // Adjust view all text size
+    color: COLORS.secondary,
+    marginRight: 4,
+  },
+  emptyContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: SPACING.l,
   },
   emptyText: {
+    fontSize: FONT_SIZES.caption,
     color: COLORS.textLight,
-    fontSize: isTablet ? FONT_SIZES.caption : FONT_SIZES.small, // Adjust empty text size
+    marginTop: SPACING.s,
     textAlign: 'center',
-    paddingVertical: SPACING.s,
   },
-  weatherInfo: {
-    marginBottom: SPACING.m,
+  addButton: {
+    backgroundColor: COLORS.primary,
+    paddingVertical: SPACING.s,
+    paddingHorizontal: SPACING.m,
+    borderRadius: BORDERS.radiusMedium,
+    marginTop: SPACING.m,
+  },
+  addButtonText: {
+    fontSize: FONT_SIZES.caption,
+    fontWeight: FONT_WEIGHTS.medium,
+    color: COLORS.white,
+  },
+  notifBadge: {
+    backgroundColor: COLORS.accent,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: SPACING.s,
+  },
+  notifBadgeText: {
+    fontSize: 10,
+    fontWeight: FONT_WEIGHTS.bold,
+    color: COLORS.white,
+  },
+  notificationsList: {
+    marginTop: SPACING.s,
+  },
+  notificationItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: SPACING.s,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.1)',
+  },
+  notifDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: COLORS.accent,
+    marginRight: SPACING.s,
+  },
+  notifDetails: {
+    flex: 1,
+  },
+  notifTitle: {
+    fontSize: FONT_SIZES.body,
+    fontWeight: FONT_WEIGHTS.medium,
+    color: COLORS.white,
+    marginBottom: 2,
+  },
+  notifTime: {
+    fontSize: FONT_SIZES.small,
+    color: COLORS.textLight,
+  },
+  weatherContent: {
+    marginTop: SPACING.s,
+  },
+  weatherRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   weatherCondition: {
-    fontSize: isTablet ? FONT_SIZES.body : FONT_SIZES.body, // Keep same or adjust
-    color: COLORS.text,
+    fontSize: FONT_SIZES.body,
+    fontWeight: FONT_WEIGHTS.medium,
+    color: COLORS.white,
   },
-  weatherHumidity: {
-    fontSize: isTablet ? FONT_SIZES.caption : FONT_SIZES.caption, // Keep same or adjust
+  weatherTemp: {
+    fontSize: FONT_SIZES.h3,
+    fontWeight: FONT_WEIGHTS.bold,
+    color: COLORS.secondary,
+  },
+  weatherDetails: {
+    flexDirection: 'row',
+    marginTop: SPACING.s,
+    paddingTop: SPACING.s,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.1)',
+  },
+  weatherDetail: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: SPACING.l,
+  },
+  weatherDetailText: {
+    fontSize: FONT_SIZES.caption,
     color: COLORS.textLight,
-    marginTop: SPACING.xs,
+    marginLeft: 4,
   },
-  impactsContainer: {
+  impactsSection: {
     marginTop: SPACING.m,
     padding: SPACING.s,
-    backgroundColor: COLORS.background,
+    backgroundColor: 'rgba(255,255,255,0.05)',
     borderRadius: BORDERS.radiusSmall,
   },
   impactsTitle: {
-    fontSize: isTablet ? FONT_SIZES.caption : FONT_SIZES.caption, // Keep same or adjust
-    fontWeight: FONT_WEIGHTS.bold,
-    color: COLORS.text,
-    marginBottom: SPACING.xs,
+    fontSize: FONT_SIZES.caption,
+    fontWeight: FONT_WEIGHTS.medium,
+    color: COLORS.accent,
+    marginBottom: 4,
   },
   impactText: {
-    fontSize: isTablet ? FONT_SIZES.caption : FONT_SIZES.small, // Adjust impact text size
+    fontSize: FONT_SIZES.caption,
+    color: COLORS.white,
+    lineHeight: 18,
+  },
+  noImpactText: {
+    fontSize: FONT_SIZES.caption,
     color: COLORS.textLight,
+    fontStyle: 'italic',
+  },
+  recommendationContent: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    padding: SPACING.m,
+    borderRadius: BORDERS.radiusSmall,
+    marginTop: SPACING.s,
   },
   recommendationText: {
-    fontSize: isTablet ? FONT_SIZES.caption : FONT_SIZES.small, // Adjust recommendation text size
-    color: COLORS.textLight,
-  },
-  loadingIndicator: {
-    paddingVertical: SPACING.s,
-  },
-  bold: {
-    fontWeight: FONT_WEIGHTS.medium,
-    color: COLORS.text, // Ensure bold text is readable
-  },
-  testButtonContainer: {
-    flexDirection: 'row', // Arrange buttons horizontally
-    justifyContent: 'space-around', // Space buttons evenly
-    marginTop: SPACING.m,
-    paddingHorizontal: SPACING.m,
-    flexWrap: 'wrap', // Allow wrapping on smaller screens
+    fontSize: FONT_SIZES.body,
+    color: COLORS.white,
+    marginLeft: SPACING.s,
+    flex: 1,
+    lineHeight: 22,
   },
   testButton: {
-    backgroundColor: COLORS.primary, // Distinct color
-    paddingVertical: SPACING.s,
-    paddingHorizontal: SPACING.m,
-    borderRadius: BORDERS.radiusSmall,
+    backgroundColor: COLORS.primaryDark,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: isTablet ? 200 : 150, // Responsive width
-    flex: isTablet ? 0 : 1, // Take available space on smaller screens
-    margin: SPACING.xs, // Add small margin
-  },
-  clearButton: {
-    // Style for the clear button if added
-    backgroundColor: COLORS.error,
+    paddingVertical: SPACING.s,
+    paddingHorizontal: SPACING.m,
+    borderRadius: BORDERS.radiusMedium,
+    marginHorizontal: SPACING.m,
+    marginTop: SPACING.s,
   },
   testButtonText: {
+    fontSize: FONT_SIZES.body,
+    fontWeight: FONT_WEIGHTS.medium,
     color: COLORS.white,
-    fontSize: isTablet ? FONT_SIZES.body : FONT_SIZES.caption, // Responsive text size
-    fontWeight: FONT_WEIGHTS.bold,
-    textAlign: 'center',
+    marginLeft: SPACING.s,
   },
 });
 

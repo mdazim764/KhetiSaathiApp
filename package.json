@@ -23,6 +23,7 @@
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "fs": "^0.0.1-security",
+    "lottie-react-native": "^7.2.2",
     "moment": "^2.30.1",
     "react": "19.0.0",
     "react-native": "0.78.1",

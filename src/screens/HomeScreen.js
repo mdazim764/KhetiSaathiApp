@@ -12,6 +12,7 @@ import {
   Platform,
   Alert,
   ImageBackground,
+  RefreshControl,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import moment from 'moment';
@@ -25,6 +26,7 @@ import env from '../config/env';
 import appConfig from '../config/appConfig';
 import LinearGradient from 'react-native-linear-gradient';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import LottieView from 'lottie-react-native'; // Optional, only if you want animated loaders
 
 // Destructure theme constants
 const {COLORS, FONT_SIZES, FONT_WEIGHTS, SPACING, BORDERS} = theme;
@@ -46,9 +48,12 @@ const HomeScreen = ({navigation}) => {
   const [locationName, setLocationName] = useState('Scanning Location...');
   const [date] = useState(moment().format('MMMM D, YYYY'));
   const [latestCrop, setLatestCrop] = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   // Keep same data fetching logic
   useEffect(() => {
+    setIsInitialLoading(true);
     loadHomePageData();
   }, []);
 
@@ -62,24 +67,35 @@ const HomeScreen = ({navigation}) => {
   };
 
   const loadHomePageData = async () => {
-    // Keep the same implementation
-    const storedLocation = await getStoredLocation();
-    if (storedLocation) {
-      console.log('HomeScreen using stored location:', storedLocation);
-      await fetchWeatherDataAndUpdateState(
-        storedLocation.latitude,
-        storedLocation.longitude,
-      );
-    } else {
-      setLocationName('Location Unavailable');
-      setWeatherLoading(false);
-      console.log('No stored location available in HomeScreen.');
+    try {
+      const storedLocation = await getStoredLocation();
+      if (storedLocation) {
+        console.log('HomeScreen using stored location:', storedLocation);
+        await fetchWeatherDataAndUpdateState(
+          storedLocation.latitude,
+          storedLocation.longitude,
+        );
+      } else {
+        setLocationName('Location Unavailable');
+        setWeatherLoading(false);
+        console.log('No stored location available in HomeScreen.');
+      }
+
+      // Load all data in parallel for faster loading
+      await Promise.all([
+        loadUpcomingTasksSnapshot(),
+        loadRecentNotificationsSnapshot(),
+        fetchWeatherImpactsSnapshot(),
+        fetchExpertRecommendationSnapshot(),
+        fetchLatestCrop(),
+      ]);
+    } catch (error) {
+      console.error('Error loading home page data:', error);
+    } finally {
+      // Set loading states to false when done
+      setIsRefreshing(false);
+      setIsInitialLoading(false);
     }
-    await loadUpcomingTasksSnapshot();
-    await loadRecentNotificationsSnapshot();
-    await fetchWeatherImpactsSnapshot();
-    await fetchExpertRecommendationSnapshot();
-    await fetchLatestCrop();
   };
 
   //function for decoding coordinates to city name
@@ -488,6 +504,12 @@ const HomeScreen = ({navigation}) => {
     }
   };
 
+  // Add this function to handle pull-to-refresh
+  const onRefresh = () => {
+    setIsRefreshing(true);
+    loadHomePageData();
+  };
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
@@ -507,344 +529,388 @@ const HomeScreen = ({navigation}) => {
         </View>
       </LinearGradient>
 
-      <ScrollView
-        contentContainerStyle={styles.scrollContainer}
-        showsVerticalScrollIndicator={false}>
-        {/* User greeting card */}
-        <View style={styles.greetingCard}>
-          <View>
-            <Text style={styles.greeting}>{getGreeting()}</Text>
-            <Text style={styles.dateLocation}>
-              <Feather name="calendar" size={14} color={COLORS.accent} /> {date}
-            </Text>
-            <Text style={styles.dateLocation}>
-              <Feather name="map-pin" size={14} color={COLORS.accent} />{' '}
-              {locationName}
-            </Text>
-          </View>
-
-          {/* Weather info */}
-          <View style={styles.weatherBrief}>
-            {!weatherLoading && weather?.current ? (
-              <View style={styles.weatherData}>
-                <Feather
-                  name={
-                    weather?.current?.condition?.icon?.includes('night')
-                      ? 'moon'
-                      : 'sun'
-                  }
-                  size={isTablet ? 36 : 28}
-                  color={COLORS.secondary}
-                />
-                <Text style={styles.temperature}>
-                  {weather?.current?.temp_c}°C
-                </Text>
-              </View>
-            ) : weatherLoading ? (
-              <ActivityIndicator size="small" color={COLORS.secondary} />
-            ) : (
-              <Text style={styles.weatherUnavailable}>Weather N/A</Text>
-            )}
-          </View>
+      {isInitialLoading ? (
+        // Initial loading screen
+        <View style={styles.loadingContainer}>
+          <LottieView
+            source={require('../assets/animations/farm-loading.json')}
+            autoPlay
+            loop
+            style={{width: 200, height: 200}}
+          />
+          <Text style={styles.loadingText}>
+            Setting up your farm dashboard...
+          </Text>
         </View>
-
-        {/* Content Area - Cards with brand new design */}
-        <View style={styles.cardsContainer}>
-          {/* Latest Crop Card */}
-          <TouchableOpacity
-            style={styles.card}
-            onPress={() =>
-              navigation.navigate('CropsTab', {screen: 'CropList'})
-            }>
-            <View style={styles.cardHeader}>
-              <MaterialCommunityIcons
-                name="sprout"
-                size={16}
-                color={COLORS.accent}
-              />
-              <Text style={styles.cardTitle}>Farm Activity</Text>
+      ) : (
+        // Main content when loaded
+        <ScrollView
+          contentContainerStyle={styles.scrollContainer}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={onRefresh}
+              colors={[COLORS.primary, COLORS.accent]}
+              tintColor={COLORS.primary}
+              title="Pull to refresh..."
+              titleColor={COLORS.textLight}
+            />
+          }>
+          {/* User greeting card */}
+          <View style={styles.greetingCard}>
+            <View>
+              <Text style={styles.greeting}>{getGreeting()}</Text>
+              <Text style={styles.dateLocation}>
+                <Feather name="calendar" size={14} color={COLORS.accent} />{' '}
+                {date}
+              </Text>
+              <Text style={styles.dateLocation}>
+                <Feather name="map-pin" size={14} color={COLORS.accent} />{' '}
+                {locationName}
+              </Text>
             </View>
 
-            {latestCrop ? (
-              <View style={styles.cropContent}>
-                <Text style={styles.cropName}>
-                  {latestCrop.crop_name || latestCrop.crop || 'Unknown Crop'}
-                </Text>
-                <Text style={styles.cropLocation}>
-                  {latestCrop.state && latestCrop.district
-                    ? `${latestCrop.district}, ${latestCrop.state}`
-                    : latestCrop.state ||
-                      latestCrop.district ||
-                      'Location unknown'}
-                </Text>
-                <View style={styles.viewAllButton}>
-                  <Text style={styles.viewAllText}>All Crops</Text>
+            {/* Weather info */}
+            <View style={styles.weatherBrief}>
+              {!weatherLoading && weather?.current ? (
+                <View style={styles.weatherData}>
                   <Feather
-                    name="chevron-right"
-                    size={14}
+                    name={
+                      weather?.current?.condition?.icon?.includes('night')
+                        ? 'moon'
+                        : 'sun'
+                    }
+                    size={isTablet ? 36 : 28}
                     color={COLORS.secondary}
                   />
+                  <Text style={styles.temperature}>
+                    {weather?.current?.temp_c}°C
+                  </Text>
                 </View>
-              </View>
-            ) : (
-              <View style={styles.emptyCropContent}>
-                <MaterialCommunityIcons
-                  name="plus-circle"
-                  size={28}
-                  color={COLORS.disabled}
-                />
-                <Text style={styles.emptyText}>
-                  Create your first crop schedule
-                </Text>
-                <TouchableOpacity
-                  style={styles.addButton}
-                  onPress={() =>
-                    navigation.navigate('HomeTab', {screen: 'GenerateCrop'})
-                  }>
-                  <Text style={styles.addButtonText}>Get Started</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </TouchableOpacity>
+              ) : weatherLoading ? (
+                <ActivityIndicator size="small" color={COLORS.secondary} />
+              ) : (
+                <Text style={styles.weatherUnavailable}>Weather N/A</Text>
+              )}
+            </View>
+          </View>
 
-          {/* Today's Tasks Card */}
-          {todaysTasks.length > 0 && (
+          {/* Content Area - Cards with brand new design */}
+          <View style={styles.cardsContainer}>
+            {/* Latest Crop Card */}
+            <TouchableOpacity
+              style={styles.card}
+              onPress={() =>
+                navigation.navigate('CropsTab', {screen: 'CropList'})
+              }>
+              <View style={styles.cardHeader}>
+                <MaterialCommunityIcons
+                  name="sprout"
+                  size={16}
+                  color={COLORS.accent}
+                />
+                <Text style={styles.cardTitle}>Farm Activity</Text>
+              </View>
+
+              {latestCrop ? (
+                <View style={styles.cropContent}>
+                  <Text style={styles.cropName}>
+                    {latestCrop.crop_name || latestCrop.crop || 'Unknown Crop'}
+                  </Text>
+                  <Text style={styles.cropLocation}>
+                    {latestCrop.state && latestCrop.district
+                      ? `${latestCrop.district}, ${latestCrop.state}`
+                      : latestCrop.state ||
+                        latestCrop.district ||
+                        'Location unknown'}
+                  </Text>
+                  <View style={styles.viewAllButton}>
+                    <Text style={styles.viewAllText}>All Crops</Text>
+                    <Feather
+                      name="chevron-right"
+                      size={14}
+                      color={COLORS.secondary}
+                    />
+                  </View>
+                </View>
+              ) : (
+                <View style={styles.emptyCropContent}>
+                  <MaterialCommunityIcons
+                    name="plus-circle"
+                    size={28}
+                    color={COLORS.disabled}
+                  />
+                  <Text style={styles.emptyText}>
+                    Create your first crop schedule
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.addButton}
+                    onPress={() =>
+                      navigation.navigate('HomeTab', {screen: 'GenerateCrop'})
+                    }>
+                    <Text style={styles.addButtonText}>Get Started</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </TouchableOpacity>
+
+            {/* Today's Tasks Card */}
+            {todaysTasks.length > 0 && (
+              <TouchableOpacity
+                style={styles.card}
+                onPress={() =>
+                  navigation.navigate('TasksTab', {screen: 'UpcomingTasks'})
+                }>
+                <View style={styles.cardHeader}>
+                  <Feather
+                    name="check-square"
+                    size={16}
+                    color={COLORS.accent}
+                  />
+                  <Text style={styles.cardTitle}>Today's Tasks</Text>
+                </View>
+
+                <View style={styles.tasksList}>
+                  {todaysTasks.slice(0, 2).map(task => (
+                    <View key={task.id} style={styles.taskItem}>
+                      <View style={styles.taskDot} />
+                      <View style={styles.taskDetails}>
+                        <Text style={styles.taskName}>{task.task}</Text>
+                        <Text style={styles.taskCrop}>{task.cropName}</Text>
+                      </View>
+                    </View>
+                  ))}
+
+                  <View style={styles.viewAllButton}>
+                    <Text style={styles.viewAllText}>All Tasks</Text>
+                    <Feather
+                      name="chevron-right"
+                      size={14}
+                      color={COLORS.secondary}
+                    />
+                  </View>
+                </View>
+              </TouchableOpacity>
+            )}
+
+            {/* Upcoming Tasks Card */}
             <TouchableOpacity
               style={styles.card}
               onPress={() =>
                 navigation.navigate('TasksTab', {screen: 'UpcomingTasks'})
               }>
               <View style={styles.cardHeader}>
-                <Feather name="check-square" size={16} color={COLORS.accent} />
-                <Text style={styles.cardTitle}>Today's Tasks</Text>
+                <Feather name="calendar" size={16} color={COLORS.accent} />
+                <Text style={styles.cardTitle}>Upcoming Tasks</Text>
               </View>
 
-              <View style={styles.tasksList}>
-                {todaysTasks.slice(0, 2).map(task => (
-                  <View key={task.id} style={styles.taskItem}>
-                    <View style={styles.taskDot} />
-                    <View style={styles.taskDetails}>
-                      <Text style={styles.taskName}>{task.task}</Text>
-                      <Text style={styles.taskCrop}>{task.cropName}</Text>
+              {upcomingTasks.length > 0 ? (
+                <View style={styles.tasksList}>
+                  {upcomingTasks.map(task => (
+                    <View key={task.id} style={styles.taskItem}>
+                      <View style={styles.taskDot} />
+                      <View style={styles.taskDetails}>
+                        <Text style={styles.taskName}>{task.task}</Text>
+                        <Text style={styles.taskDate}>
+                          {moment(task.date).format('MMM D')}
+                        </Text>
+                      </View>
                     </View>
+                  ))}
+
+                  <View style={styles.viewAllButton}>
+                    <Text style={styles.viewAllText}>Calendar View</Text>
+                    <Feather
+                      name="chevron-right"
+                      size={14}
+                      color={COLORS.secondary}
+                    />
                   </View>
-                ))}
-
-                <View style={styles.viewAllButton}>
-                  <Text style={styles.viewAllText}>All Tasks</Text>
-                  <Feather
-                    name="chevron-right"
-                    size={14}
-                    color={COLORS.secondary}
-                  />
                 </View>
-              </View>
+              ) : (
+                <View style={styles.emptyContent}>
+                  <Feather name="calendar" size={28} color={COLORS.disabled} />
+                  <Text style={styles.emptyText}>No upcoming tasks</Text>
+                </View>
+              )}
             </TouchableOpacity>
-          )}
 
-          {/* Upcoming Tasks Card */}
-          <TouchableOpacity
-            style={styles.card}
-            onPress={() =>
-              navigation.navigate('TasksTab', {screen: 'UpcomingTasks'})
-            }>
-            <View style={styles.cardHeader}>
-              <Feather name="calendar" size={16} color={COLORS.accent} />
-              <Text style={styles.cardTitle}>Upcoming Tasks</Text>
-            </View>
+            {/* Notifications Card */}
+            <TouchableOpacity
+              style={styles.card}
+              onPress={() =>
+                navigation.navigate('NotificationsTab', {
+                  screen: 'Notifications',
+                })
+              }>
+              <View style={styles.cardHeader}>
+                <Feather name="bell" size={16} color={COLORS.accent} />
+                <Text style={styles.cardTitle}>Notifications</Text>
+                {recentNotifications.length > 0 && (
+                  <View style={styles.notifBadge}>
+                    <Text style={styles.notifBadgeText}>
+                      {recentNotifications.length}
+                    </Text>
+                  </View>
+                )}
+              </View>
 
-            {upcomingTasks.length > 0 ? (
-              <View style={styles.tasksList}>
-                {upcomingTasks.map(task => (
-                  <View key={task.id} style={styles.taskItem}>
-                    <View style={styles.taskDot} />
-                    <View style={styles.taskDetails}>
-                      <Text style={styles.taskName}>{task.task}</Text>
-                      <Text style={styles.taskDate}>
-                        {moment(task.date).format('MMM D')}
+              {recentNotifications.length > 0 ? (
+                <View style={styles.notificationsList}>
+                  {recentNotifications.map(notification => (
+                    <View key={notification.id} style={styles.notificationItem}>
+                      <View style={styles.notifDot} />
+                      <View style={styles.notifDetails}>
+                        <Text style={styles.notifTitle}>
+                          {notification.title}
+                        </Text>
+                        <Text style={styles.notifTime}>
+                          {moment(notification.timestamp).fromNow()}
+                        </Text>
+                      </View>
+                    </View>
+                  ))}
+
+                  <View style={styles.viewAllButton}>
+                    <Text style={styles.viewAllText}>All Notifications</Text>
+                    <Feather
+                      name="chevron-right"
+                      size={14}
+                      color={COLORS.secondary}
+                    />
+                  </View>
+                </View>
+              ) : (
+                <View style={styles.emptyContent}>
+                  <Feather name="bell-off" size={28} color={COLORS.disabled} />
+                  <Text style={styles.emptyText}>No new notifications</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+
+            {/* Weather and Impacts Card */}
+            <View style={styles.card}>
+              <View style={styles.cardHeader}>
+                <Feather name="cloud" size={16} color={COLORS.accent} />
+                <Text style={styles.cardTitle}>Weather Update</Text>
+              </View>
+
+              {!weatherLoading && weather?.current ? (
+                <View style={styles.weatherContent}>
+                  <View style={styles.weatherRow}>
+                    <Text style={styles.weatherCondition}>
+                      {weather?.current?.condition?.text}
+                    </Text>
+                    <Text style={styles.weatherTemp}>
+                      {weather?.current?.temp_c}°C
+                    </Text>
+                  </View>
+
+                  <View style={styles.weatherDetails}>
+                    <View style={styles.weatherDetail}>
+                      <Feather
+                        name="droplet"
+                        size={14}
+                        color={COLORS.textLight}
+                      />
+                      <Text style={styles.weatherDetailText}>
+                        {weather?.current?.humidity}%
+                      </Text>
+                    </View>
+
+                    <View style={styles.weatherDetail}>
+                      <Feather name="wind" size={14} color={COLORS.textLight} />
+                      <Text style={styles.weatherDetailText}>
+                        {weather?.current?.wind_kph} km/h
                       </Text>
                     </View>
                   </View>
-                ))}
 
-                <View style={styles.viewAllButton}>
-                  <Text style={styles.viewAllText}>Calendar View</Text>
-                  <Feather
-                    name="chevron-right"
-                    size={14}
-                    color={COLORS.secondary}
-                  />
+                  <View style={styles.impactsSection}>
+                    <Text style={styles.impactsTitle}>Farm Impact:</Text>
+                    {!impactsLoading &&
+                    weatherImpacts.length > 0 &&
+                    weatherImpacts[0] ? (
+                      <Text style={styles.impactText}>{weatherImpacts[0]}</Text>
+                    ) : (
+                      <Text style={styles.noImpactText}>
+                        No significant weather impacts detected
+                      </Text>
+                    )}
+                  </View>
                 </View>
-              </View>
-            ) : (
-              <View style={styles.emptyContent}>
-                <Feather name="calendar" size={28} color={COLORS.disabled} />
-                <Text style={styles.emptyText}>No upcoming tasks</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-
-          {/* Notifications Card */}
-          <TouchableOpacity
-            style={styles.card}
-            onPress={() =>
-              navigation.navigate('NotificationsTab', {screen: 'Notifications'})
-            }>
-            <View style={styles.cardHeader}>
-              <Feather name="bell" size={16} color={COLORS.accent} />
-              <Text style={styles.cardTitle}>Notifications</Text>
-              {recentNotifications.length > 0 && (
-                <View style={styles.notifBadge}>
-                  <Text style={styles.notifBadgeText}>
-                    {recentNotifications.length}
-                  </Text>
+              ) : (
+                <View style={styles.emptyContent}>
+                  <Feather name="cloud-off" size={28} color={COLORS.disabled} />
+                  <Text style={styles.emptyText}>Weather data unavailable</Text>
                 </View>
               )}
             </View>
 
-            {recentNotifications.length > 0 ? (
-              <View style={styles.notificationsList}>
-                {recentNotifications.map(notification => (
-                  <View key={notification.id} style={styles.notificationItem}>
-                    <View style={styles.notifDot} />
-                    <View style={styles.notifDetails}>
-                      <Text style={styles.notifTitle}>
-                        {notification.title}
-                      </Text>
-                      <Text style={styles.notifTime}>
-                        {moment(notification.timestamp).fromNow()}
-                      </Text>
-                    </View>
-                  </View>
-                ))}
+            {/* Expert Recommendations Card */}
+            <View style={styles.card}>
+              <View style={styles.cardHeader}>
+                <Feather name="zap" size={16} color={COLORS.accent} />
+                <Text style={styles.cardTitle}>Smart Insights</Text>
+              </View>
 
-                <View style={styles.viewAllButton}>
-                  <Text style={styles.viewAllText}>All Notifications</Text>
-                  <Feather
-                    name="chevron-right"
-                    size={14}
+              {!recommendationLoading && expertRecommendation?.tip ? (
+                <View style={styles.recommendationContent}>
+                  <MaterialCommunityIcons
+                    name="lightbulb-on"
+                    size={16}
                     color={COLORS.secondary}
                   />
+                  <Text style={styles.recommendationText}>
+                    {expertRecommendation.tip}
+                  </Text>
                 </View>
-              </View>
-            ) : (
-              <View style={styles.emptyContent}>
-                <Feather name="bell-off" size={28} color={COLORS.disabled} />
-                <Text style={styles.emptyText}>No new notifications</Text>
-              </View>
-            )}
+              ) : (
+                <View style={styles.emptyContent}>
+                  <MaterialCommunityIcons
+                    name="lightbulb-off"
+                    size={28}
+                    color={COLORS.disabled}
+                  />
+                  <Text style={styles.emptyText}>No insights available</Text>
+                </View>
+              )}
+            </View>
+          </View>
+
+          {/* Test Button */}
+          <TouchableOpacity
+            style={styles.testButton}
+            onPress={async () => {
+              try {
+                // Show loading state
+                setIsRefreshing(true);
+
+                // Add test data
+                await addTestCropData();
+
+                // Reload data to reflect changes
+                await loadHomePageData();
+
+                // Show confirmation
+                Alert.alert(
+                  'Test Data Added',
+                  'Test data added successfully and your dashboard has been refreshed.',
+                  [{text: 'OK'}],
+                );
+              } catch (error) {
+                console.error('Error adding test data:', error);
+                Alert.alert('Error', 'Failed to add test data');
+              } finally {
+                setIsRefreshing(false);
+              }
+            }}>
+            <Feather name="database" size={18} color={COLORS.white} />
+            <Text style={styles.testButtonText}>Load Test Data</Text>
           </TouchableOpacity>
-
-          {/* Weather and Impacts Card */}
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <Feather name="cloud" size={16} color={COLORS.accent} />
-              <Text style={styles.cardTitle}>Weather Update</Text>
-            </View>
-
-            {!weatherLoading && weather?.current ? (
-              <View style={styles.weatherContent}>
-                <View style={styles.weatherRow}>
-                  <Text style={styles.weatherCondition}>
-                    {weather?.current?.condition?.text}
-                  </Text>
-                  <Text style={styles.weatherTemp}>
-                    {weather?.current?.temp_c}°C
-                  </Text>
-                </View>
-
-                <View style={styles.weatherDetails}>
-                  <View style={styles.weatherDetail}>
-                    <Feather
-                      name="droplet"
-                      size={14}
-                      color={COLORS.textLight}
-                    />
-                    <Text style={styles.weatherDetailText}>
-                      {weather?.current?.humidity}%
-                    </Text>
-                  </View>
-
-                  <View style={styles.weatherDetail}>
-                    <Feather name="wind" size={14} color={COLORS.textLight} />
-                    <Text style={styles.weatherDetailText}>
-                      {weather?.current?.wind_kph} km/h
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.impactsSection}>
-                  <Text style={styles.impactsTitle}>Farm Impact:</Text>
-                  {!impactsLoading &&
-                  weatherImpacts.length > 0 &&
-                  weatherImpacts[0] ? (
-                    <Text style={styles.impactText}>{weatherImpacts[0]}</Text>
-                  ) : (
-                    <Text style={styles.noImpactText}>
-                      No significant weather impacts detected
-                    </Text>
-                  )}
-                </View>
-              </View>
-            ) : (
-              <View style={styles.emptyContent}>
-                <Feather name="cloud-off" size={28} color={COLORS.disabled} />
-                <Text style={styles.emptyText}>Weather data unavailable</Text>
-              </View>
-            )}
-          </View>
-
-          {/* Expert Recommendations Card */}
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <Feather name="zap" size={16} color={COLORS.accent} />
-              <Text style={styles.cardTitle}>Smart Insights</Text>
-            </View>
-
-            {!recommendationLoading && expertRecommendation?.tip ? (
-              <View style={styles.recommendationContent}>
-                <MaterialCommunityIcons
-                  name="lightbulb-on"
-                  size={16}
-                  color={COLORS.secondary}
-                />
-                <Text style={styles.recommendationText}>
-                  {expertRecommendation.tip}
-                </Text>
-              </View>
-            ) : (
-              <View style={styles.emptyContent}>
-                <MaterialCommunityIcons
-                  name="lightbulb-off"
-                  size={28}
-                  color={COLORS.disabled}
-                />
-                <Text style={styles.emptyText}>No insights available</Text>
-              </View>
-            )}
-          </View>
-        </View>
-
-        {/* Test Button */}
-        <TouchableOpacity
-          style={styles.testButton}
-          onPress={async () => {
-            await addTestCropData();
-            Alert.alert(
-              'Test Data Added',
-              'Test data added successfully. Pull to refresh or navigate to see changes.',
-              [
-                {
-                  text: 'OK',
-                  onPress: () => loadHomePageData(),
-                },
-              ],
-            );
-          }}>
-          <Feather name="database" size={18} color={COLORS.white} />
-          <Text style={styles.testButtonText}>Load Test Data</Text>
-        </TouchableOpacity>
-      </ScrollView>
+        </ScrollView>
+      )}
     </View>
   );
 };
@@ -1177,6 +1243,20 @@ const styles = StyleSheet.create({
     fontWeight: FONT_WEIGHTS.medium,
     color: COLORS.white,
     marginLeft: SPACING.s,
+  },
+  // Add these styles to your StyleSheet
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: COLORS.background,
+    padding: SPACING.xl,
+  },
+  loadingText: {
+    color: COLORS.textLight,
+    marginTop: SPACING.m,
+    fontSize: FONT_SIZES.body,
+    textAlign: 'center',
   },
 });
 

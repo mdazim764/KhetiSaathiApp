@@ -105,7 +105,6 @@ import {NavigationContainer} from '@react-navigation/native';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import CalendarIcon from 'react-native-vector-icons/AntDesign';
 
 // Import Screens
 import HomeScreen from './screens/HomeScreen';
@@ -116,14 +115,18 @@ import CropDetailScreen from './screens/CropDetailScreen';
 import GenerateCropScheduleScreen from './screens/GenerateCropScheduleScreen';
 import UpcomingTasksScreen from './screens/UpcomingTasksScreen';
 import NotificationScreen from './screens/NotificationScreen';
+import SplashScreen from './screens/SplashScreen';
 
 // Import the theme constants
 import theme from './constants/theme';
 const {COLORS, FONT_SIZES, FONT_WEIGHTS} = theme;
+
+// Create navigators
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
+const RootStack = createNativeStackNavigator(); // New root stack for splash screen
 
-// Stack Navigators for each Tab
+// Stack Navigators for each Tab - unchanged
 const HomeStack = () => (
   <Stack.Navigator screenOptions={{headerShown: false}}>
     <Stack.Screen name="Home" component={HomeScreen} />
@@ -161,101 +164,114 @@ const NotificationsStack = () => (
   </Stack.Navigator>
 );
 
+// Create the main tab navigator component
+const MainTabNavigator = () => {
+  return (
+    <Tab.Navigator
+      initialRouteName="HomeTab"
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: COLORS.primary,
+        tabBarInactiveTintColor: COLORS.textLight,
+        tabBarStyle: {
+          backgroundColor: COLORS.surface,
+          borderTopColor: COLORS.border,
+        },
+        tabBarLabelStyle: {
+          fontSize: FONT_SIZES.small,
+        },
+        headerStyle: {
+          backgroundColor: COLORS.primary,
+        },
+        headerTintColor: COLORS.white,
+        headerTitleStyle: {
+          fontWeight: FONT_WEIGHTS.bold,
+          fontSize: FONT_SIZES.h4,
+        },
+      }}>
+      <Tab.Screen
+        name="HomeTab"
+        component={HomeStack}
+        options={{
+          tabBarLabel: 'Home',
+          tabBarIcon: ({color, size}) => (
+            <MaterialCommunityIcons
+              name="home-outline"
+              color={color}
+              size={size}
+            />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="CalendarTab"
+        component={CalendarStack}
+        options={{
+          tabBarLabel: 'Calendar',
+          tabBarIcon: ({color, size}) => (
+            <MaterialIcons name="calendar-month" color={color} size={size} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="CropsTab"
+        component={CropsStack}
+        options={{
+          tabBarLabel: 'Crops',
+          tabBarIcon: ({color, size}) => (
+            <MaterialCommunityIcons
+              name="view-list-outline"
+              color={color}
+              size={size}
+            />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="TasksTab"
+        component={TasksStack}
+        options={{
+          tabBarLabel: 'Tasks',
+          tabBarIcon: ({color, size}) => (
+            <MaterialCommunityIcons
+              name="calendar-check-outline"
+              color={color}
+              size={size}
+            />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="NotificationsTab"
+        component={NotificationsStack}
+        options={{
+          tabBarLabel: 'Notifications',
+          tabBarIcon: ({color, size}) => (
+            <MaterialCommunityIcons
+              name="bell-outline"
+              color={color}
+              size={size}
+            />
+          ),
+        }}
+      />
+    </Tab.Navigator>
+  );
+};
+
+// Root app navigator with splash screen
 const AppNavigator = () => {
   return (
     <NavigationContainer>
-      <Tab.Navigator
-        initialRouteName="HomeTab" // Corrected initialRouteName
-        screenOptions={{
-          headerShown: false,
-          tabBarActiveTintColor: COLORS.primary,
-          tabBarInactiveTintColor: COLORS.textLight,
-          tabBarStyle: {
-            backgroundColor: COLORS.surface, // Optional: Style the background of the tab bar
-            borderTopColor: COLORS.border, // Optional: Add a border at the top
-          },
-          tabBarLabelStyle: {
-            fontSize: FONT_SIZES.small,
-          },
-          headerStyle: {
-            // Use theme primary color for header background
-            backgroundColor: COLORS.primary,
-          },
-          // Use theme color (e.g., white) for back button and title
-          headerTintColor: COLORS.white,
-          headerTitleStyle: {
-            // Use theme font weight and size
-            fontWeight: FONT_WEIGHTS.bold,
-            fontSize: FONT_SIZES.h4, // Added consistent font size
-          },
-        }}>
-        <Tab.Screen
-          name="HomeTab" // Changed name for clarity in Tab Navigator
-          component={HomeStack}
-          options={{
-            tabBarLabel: 'Home',
-            tabBarIcon: ({color, size}) => (
-              <MaterialCommunityIcons
-                name="home-outline"
-                color={color}
-                size={size}
-              />
-            ),
-          }}
-        />
-        <Tab.Screen
-          name="CalendarTab" // Changed name for clarity
-          component={CalendarStack}
-          options={{
-            tabBarLabel: 'Calendar',
-            tabBarIcon: ({color, size}) => (
-              <MaterialIcons name="calendar-month" color={color} size={size} />
-            ),
-          }}
-        />
-        <Tab.Screen
-          name="CropsTab" // Changed name for clarity
-          component={CropsStack}
-          options={{
-            tabBarLabel: 'Crops',
-            tabBarIcon: ({color, size}) => (
-              <MaterialCommunityIcons
-                name="view-list-outline"
-                color={color}
-                size={size}
-              />
-            ),
-          }}
-        />
-        <Tab.Screen
-          name="TasksTab" // Changed name for clarity
-          component={TasksStack}
-          options={{
-            tabBarLabel: 'Tasks',
-            tabBarIcon: ({color, size}) => (
-              <MaterialCommunityIcons
-                name="calendar-check-outline"
-                color={color}
-                size={size}
-              />
-            ),
-          }}
-        />
-        <Tab.Screen
-          name="NotificationsTab" // Changed name for clarity
-          component={NotificationsStack}
-          options={{
-            tabBarLabel: 'Notifications',
-            tabBarIcon: ({color, size}) => (
-              <MaterialCommunityIcons
-                name="bell-outline"
-                color={color}
-                size={size}
-              />
-            ),
-          }}
-        />
-      </Tab.Navigator>
+      <RootStack.Navigator
+        initialRouteName="Splash"
+        screenOptions={{headerShown: false}}>
+        {/* Splash screen as initial route */}
+        <RootStack.Screen name="Splash" component={SplashScreen} />
+
+        {/* Main app with tabs */}
+        <RootStack.Screen name="MainApp" component={MainTabNavigator} />
+      </RootStack.Navigator>
     </NavigationContainer>
   );
 };

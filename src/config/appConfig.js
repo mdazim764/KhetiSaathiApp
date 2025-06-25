@@ -20,7 +20,7 @@ export default {
   
   // API endpoints
   endpoints: {
-    serverBase: 'https://khetisaathi-backend.vercel.app',
+    serverBase: 'https://khetisaathi-backend-git-main-azim-khairdis-projects.vercel.app',
     weatherApi: 'https://api.weatherapi.com/v1',
   }
 };

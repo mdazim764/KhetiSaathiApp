@@ -533,7 +533,7 @@ const HomeScreen = ({navigation}) => {
         // Initial loading screen
         <View style={styles.loadingContainer}>
           <LottieView
-            source={require('../assets/animations/farm-loading.json')}
+            source={require('../assets/animations/Animation-loading.json')}
             autoPlay
             loop
             style={{width: 200, height: 200}}

@@ -19,64 +19,25 @@ const {COLORS, FONT_SIZES, FONT_WEIGHTS, SPACING} = theme;
 // Background particle animation component
 const ParticleEffect = () => {
   // Create 12 particles with random positions and animations
-  const particles = Array(12).fill(0).map((_, i) => {
-    const size = Math.random() * 10 + 5;
-    const startX = Math.random() * width;
-    const startY = Math.random() * height;
-    
-    const translateY = useRef(new Animated.Value(0)).current;
-    const translateX = useRef(new Animated.Value(0)).current;
-    const opacity = useRef(new Animated.Value(0)).current;
-    const scale = useRef(new Animated.Value(0)).current;
-    
-    useEffect(() => {
-      // Random timing for staggered effect
-      const delay = Math.random() * 2000;
-      const duration = 3000 + Math.random() * 4000;
-      
-      Animated.sequence([
-        Animated.delay(delay),
-        Animated.parallel([
-          Animated.timing(translateY, {
-            toValue: -100 - Math.random() * 100,
-            duration,
-            useNativeDriver: true,
-            easing: Easing.out(Easing.ease),
-          }),
-          Animated.timing(translateX, {
-            toValue: (Math.random() - 0.5) * 100,
-            duration,
-            useNativeDriver: true,
-          }),
-          Animated.timing(opacity, {
-            toValue: 0.7,
-            duration: duration * 0.3,
-            useNativeDriver: true,
-          }),
-          Animated.timing(scale, {
-            toValue: 1,
-            duration: duration * 0.3,
-            useNativeDriver: true,
-          }),
-          Animated.sequence([
-            Animated.delay(duration * 0.7),
-            Animated.timing(opacity, {
-              toValue: 0,
-              duration: duration * 0.3,
-              useNativeDriver: true,
-            }),
-          ]),
-        ]),
-      ]).start(() => {
-        // Reset and restart animation
-        translateY.setValue(0);
-        translateX.setValue(0);
-        opacity.setValue(0);
-        scale.setValue(0);
-        
-        // Create infinite loop
+  const particles = Array(12)
+    .fill(0)
+    .map((_, i) => {
+      const size = Math.random() * 10 + 5;
+      const startX = Math.random() * width;
+      const startY = Math.random() * height;
+
+      const translateY = useRef(new Animated.Value(0)).current;
+      const translateX = useRef(new Animated.Value(0)).current;
+      const opacity = useRef(new Animated.Value(0)).current;
+      const scale = useRef(new Animated.Value(0)).current;
+
+      useEffect(() => {
+        // Random timing for staggered effect
+        const delay = Math.random() * 2000;
+        const duration = 3000 + Math.random() * 4000;
+
         Animated.sequence([
-          Animated.delay(Math.random() * 1000),
+          Animated.delay(delay),
           Animated.parallel([
             Animated.timing(translateY, {
               toValue: -100 - Math.random() * 100,
@@ -108,35 +69,76 @@ const ParticleEffect = () => {
               }),
             ]),
           ]),
-        ]).start();
-      });
-    }, []);
-    
-    return (
-      <Animated.View
-        key={i}
-        style={[
-          styles.particle,
-          {
-            width: size,
-            height: size,
-            borderRadius: size / 2,
-            left: startX,
-            top: startY,
-            opacity,
-            transform: [
-              {translateY},
-              {translateX},
-              {scale},
-            ],
-            backgroundColor: i % 3 === 0 ? COLORS.primary : 
-                           i % 3 === 1 ? COLORS.secondary : COLORS.accent,
-          },
-        ]}
-      />
-    );
-  });
-  
+        ]).start(() => {
+          // Reset and restart animation
+          translateY.setValue(0);
+          translateX.setValue(0);
+          opacity.setValue(0);
+          scale.setValue(0);
+
+          // Create infinite loop
+          Animated.sequence([
+            Animated.delay(Math.random() * 1000),
+            Animated.parallel([
+              Animated.timing(translateY, {
+                toValue: -100 - Math.random() * 100,
+                duration,
+                useNativeDriver: true,
+                easing: Easing.out(Easing.ease),
+              }),
+              Animated.timing(translateX, {
+                toValue: (Math.random() - 0.5) * 100,
+                duration,
+                useNativeDriver: true,
+              }),
+              Animated.timing(opacity, {
+                toValue: 0.7,
+                duration: duration * 0.3,
+                useNativeDriver: true,
+              }),
+              Animated.timing(scale, {
+                toValue: 1,
+                duration: duration * 0.3,
+                useNativeDriver: true,
+              }),
+              Animated.sequence([
+                Animated.delay(duration * 0.7),
+                Animated.timing(opacity, {
+                  toValue: 0,
+                  duration: duration * 0.3,
+                  useNativeDriver: true,
+                }),
+              ]),
+            ]),
+          ]).start();
+        });
+      }, []);
+
+      return (
+        <Animated.View
+          key={i}
+          style={[
+            styles.particle,
+            {
+              width: size,
+              height: size,
+              borderRadius: size / 2,
+              left: startX,
+              top: startY,
+              opacity,
+              transform: [{translateY}, {translateX}, {scale}],
+              backgroundColor:
+                i % 3 === 0
+                  ? COLORS.primary
+                  : i % 3 === 1
+                  ? COLORS.secondary
+                  : COLORS.accent,
+            },
+          ]}
+        />
+      );
+    });
+
   return <>{particles}</>;
 };
 
@@ -166,7 +168,7 @@ const SplashScreen = ({navigation}) => {
           useNativeDriver: true,
           easing: Easing.inOut(Easing.ease),
         }),
-      ])
+      ]),
     ).start();
 
     // Initial animations with staggered text
@@ -236,11 +238,20 @@ const SplashScreen = ({navigation}) => {
         // Navigate to the main screen
         navigation.replace('MainApp');
       });
-    }, 6000);
+    }, 3000);
 
     // Clear timeout on unmount
     return () => clearTimeout(timer);
-  }, [fadeAnim, scaleAnim, textAnimName, textAnimTagline, textFadeAnimName, textFadeAnimTagline, pulseAnim, navigation]);
+  }, [
+    fadeAnim,
+    scaleAnim,
+    textAnimName,
+    textAnimTagline,
+    textFadeAnimName,
+    textFadeAnimTagline,
+    pulseAnim,
+    navigation,
+  ]);
 
   return (
     <View style={styles.container}>
@@ -256,7 +267,9 @@ const SplashScreen = ({navigation}) => {
       <ParticleEffect />
 
       {/* Circular glow effect */}
-      <Animated.View style={[styles.glowCircle, {transform: [{scale: pulseAnim}]}]} />
+      <Animated.View
+        style={[styles.glowCircle, {transform: [{scale: pulseAnim}]}]}
+      />
 
       <Animated.View
         style={[
@@ -268,32 +281,32 @@ const SplashScreen = ({navigation}) => {
         ]}>
         <View style={styles.logoContainer}>
           <LottieView
-            source={require('../assets/animations/farm-loading.json')}
+            source={require('../assets/animations/Animation-plant.json')}
             autoPlay
             loop
             style={styles.animation}
           />
         </View>
 
-        <Animated.Text 
+        <Animated.Text
           style={[
             styles.appName,
             {
               opacity: textFadeAnimName,
               transform: [{translateY: textAnimName}],
-            }
+            },
           ]}>
           {appConfig.appName}
           <Text style={styles.appEmoji}>{appConfig.appEmoji}</Text>
         </Animated.Text>
-        
-        <Animated.Text 
+
+        <Animated.Text
           style={[
             styles.tagline,
             {
               opacity: textFadeAnimTagline,
               transform: [{translateY: textAnimTagline}],
-            }
+            },
           ]}>
           {appConfig.appTagline}
         </Animated.Text>
@@ -375,7 +388,7 @@ const styles = StyleSheet.create({
   particle: {
     position: 'absolute',
     opacity: 0,
-  }
+  },
 });
 
 export default SplashScreen;

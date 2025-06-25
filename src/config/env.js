@@ -29,7 +29,7 @@ export default {
   // Endpoints - with Android emulator fix and slash handling
   SERVER_URL: fixAndroidEmulatorUrl(
     SERVER_URL ||
-      'https://crop-calendar-backend-git-main-azim-khairdis-projects.vercel.app',
+      'https://khetisaathi-backend-git-main-azim-khairdis-projects.vercel.app',
   ).replace(/\/$/, ''),
   WEATHER_API_BASE: WEATHER_API_BASE || 'https://api.weatherapi.com/v1',
   NOMINATIM_API_BASE:

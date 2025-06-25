@@ -9,6 +9,7 @@ import {
   Platform,
   StatusBar,
   RefreshControl,
+  Modal,
 } from 'react-native';
 import {Calendar} from 'react-native-calendars';
 import {FlatList} from 'react-native-gesture-handler';
@@ -41,6 +42,12 @@ const CalendarScreen = ({navigation}) => {
   );
   const [selectedDateEvents, setSelectedDateEvents] = useState([]);
   const [loadingSelectedEvents, setLoadingSelectedEvents] = useState(false);
+  const [currentVisibleMonth, setCurrentVisibleMonth] = useState(selectedDate);
+  const [isMonthPickerVisible, setMonthPickerVisible] = useState(false);
+  const [yearPickerVisible, setYearPickerVisible] = useState(false);
+  const [selectedYear, setSelectedYear] = useState(moment().year());
+  const [selectedMonth, setSelectedMonth] = useState(moment().month());
+  const [headerExpanded, setHeaderExpanded] = useState(false); // New state for header expansion
 
   // Load calendar data on mount
   useEffect(() => {
@@ -75,9 +82,15 @@ const CalendarScreen = ({navigation}) => {
   const onMonthChange = month => {
     // Ensure month has leading zero if needed
     const formattedMonth = month.month.toString().padStart(2, '0');
-    setCurrentMonthName(
-      moment(`${month.year}-${formattedMonth}-01`).format('MMMM YYYY'),
-    );
+    const newDate = `${month.year}-${formattedMonth}-01`;
+
+    // Update visible month and name
+    setCurrentVisibleMonth(newDate);
+    setCurrentMonthName(moment(newDate).format('MMMM YYYY'));
+
+    // Also update the selected month/year state for the picker
+    setSelectedMonth(month.month - 1); // month is 1-indexed, but state is 0-indexed
+    setSelectedYear(month.year);
   };
 
   // Load events for the selected date
@@ -298,6 +311,9 @@ const CalendarScreen = ({navigation}) => {
     // Update state
     setMarkedDates(newMarkedDates);
     setSelectedDate(day.dateString);
+
+    // Don't change the current visible month
+    // This allows users to select a date without the calendar jumping
   };
 
   // Render a single event item
@@ -407,16 +423,152 @@ const CalendarScreen = ({navigation}) => {
               {/* Calendar Component */}
               <View style={styles.calendarContainer}>
                 <Calendar
-                  current={selectedDate}
+                  current={currentVisibleMonth}
                   onDayPress={onDayPress}
                   onMonthChange={onMonthChange}
                   markedDates={markedDates}
                   enableSwipeMonths={true}
-                  // Add these lines to extend navigation range
-                  minDate={'2020-01-01'} // Allow navigation back to 2020
-                  maxDate={'2030-12-31'} // Allow navigation forward to 2030
-                  pastScrollRange={60} // Allow scrolling 60 months into the past
-                  futureScrollRange={60} // Allow scrolling 60 months into the future
+                  minDate={'2020-01-01'}
+                  maxDate={'2030-12-31'}
+                  pastScrollRange={60}
+                  futureScrollRange={60}
+                  // Custom header rendering
+                  customHeader={props => (
+                    <View>
+                      {/* Clickable Calendar Header */}
+                      <View style={styles.calendarHeader}>
+                        {/* Left arrow for previous month */}
+                        <TouchableOpacity
+                          style={styles.monthNavButton}
+                          onPress={() => {
+                            const prevMonth = moment(currentVisibleMonth)
+                              .subtract(1, 'month')
+                              .format('YYYY-MM-DD');
+                            setCurrentVisibleMonth(prevMonth);
+                            setCurrentMonthName(
+                              moment(prevMonth).format('MMMM YYYY'),
+                            );
+                          }}>
+                          <Feather
+                            name="chevron-left"
+                            size={24}
+                            color={COLORS.white}
+                          />
+                        </TouchableOpacity>
+
+                        {/* Month/Year Display */}
+                        <TouchableOpacity
+                          style={styles.monthYearDisplay}
+                          onPress={() => setHeaderExpanded(!headerExpanded)}
+                          activeOpacity={0.7}>
+                          <Text style={styles.calendarHeaderText}>
+                            {currentMonthName}
+                          </Text>
+                          <Feather
+                            name={
+                              headerExpanded ? 'chevron-up' : 'chevron-down'
+                            }
+                            size={16}
+                            color={COLORS.white}
+                          />
+                        </TouchableOpacity>
+
+                        {/* Right arrow for next month */}
+                        <TouchableOpacity
+                          style={styles.monthNavButton}
+                          onPress={() => {
+                            const nextMonth = moment(currentVisibleMonth)
+                              .add(1, 'month')
+                              .format('YYYY-MM-DD');
+                            setCurrentVisibleMonth(nextMonth);
+                            setCurrentMonthName(
+                              moment(nextMonth).format('MMMM YYYY'),
+                            );
+                          }}>
+                          <Feather
+                            name="chevron-right"
+                            size={24}
+                            color={COLORS.white}
+                          />
+                        </TouchableOpacity>
+                      </View>
+
+                      {/* Month/Year Picker */}
+                      {headerExpanded && (
+                        <View style={styles.inlineMonthYearPicker}>
+                          {/* Year Selector */}
+                          <View style={styles.yearPickerHeader}>
+                            <TouchableOpacity
+                              style={styles.yearArrow}
+                              onPress={() => {
+                                if (selectedYear > 2020)
+                                  setSelectedYear(selectedYear - 1);
+                              }}>
+                              <Feather
+                                name="chevron-left"
+                                size={20}
+                                color={COLORS.white}
+                              />
+                            </TouchableOpacity>
+                            <Text style={styles.yearPickerText}>
+                              {selectedYear}
+                            </Text>
+                            <TouchableOpacity
+                              style={styles.yearArrow}
+                              onPress={() => {
+                                if (selectedYear < 2030)
+                                  setSelectedYear(selectedYear + 1);
+                              }}>
+                              <Feather
+                                name="chevron-right"
+                                size={20}
+                                color={COLORS.white}
+                              />
+                            </TouchableOpacity>
+                          </View>
+
+                          {/* Month Grid */}
+                          <View style={styles.monthGrid}>
+                            {moment.monthsShort().map((month, index) => (
+                              <TouchableOpacity
+                                key={month}
+                                style={[
+                                  styles.monthGridItem,
+                                  selectedMonth === index &&
+                                    styles.selectedMonthGridItem,
+                                ]}
+                                onPress={() => {
+                                  setSelectedMonth(index);
+                                  // Go to selected month/year
+                                  const newVisibleMonth = moment()
+                                    .year(selectedYear)
+                                    .month(index)
+                                    .date(1)
+                                    .format('YYYY-MM-DD');
+                                  setCurrentVisibleMonth(newVisibleMonth);
+                                  setCurrentMonthName(
+                                    moment(newVisibleMonth).format('MMMM YYYY'),
+                                  );
+                                  setHeaderExpanded(false);
+                                }}>
+                                <Text
+                                  style={[
+                                    styles.monthGridItemText,
+                                    selectedMonth === index &&
+                                      styles.selectedMonthGridItemText,
+                                  ]}>
+                                  {month}
+                                </Text>
+                              </TouchableOpacity>
+                            ))}
+                          </View>
+                        </View>
+                      )}
+
+                      {/* Weekday names are rendered by the Calendar component */}
+                      <View style={styles.weekdayHeader}>{props.week}</View>
+                    </View>
+                  )}
                   theme={{
                     backgroundColor: COLORS.surface,
                     calendarBackground: COLORS.surface,
@@ -475,6 +627,92 @@ const CalendarScreen = ({navigation}) => {
         onPress={() => navigation.navigate('CalendarTab', {screen: 'AddTask'})}>
         <Feather name="plus" size={24} color={COLORS.white} />
       </TouchableOpacity>
+
+      {/* Month Picker Modal */}
+      <Modal
+        transparent={true}
+        visible={isMonthPickerVisible}
+        animationType="fade"
+        onRequestClose={() => setMonthPickerVisible(false)}>
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setMonthPickerVisible(false)}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Select Month & Year</Text>
+
+            {/* Year selector */}
+            <View style={styles.yearSelector}>
+              <TouchableOpacity
+                style={styles.yearButton}
+                onPress={() => {
+                  if (selectedYear > 2020) setSelectedYear(selectedYear - 1);
+                }}>
+                <Feather name="chevron-left" size={24} color={COLORS.white} />
+              </TouchableOpacity>
+
+              <Text style={styles.yearText}>{selectedYear}</Text>
+
+              <TouchableOpacity
+                style={styles.yearButton}
+                onPress={() => {
+                  if (selectedYear < 2030) setSelectedYear(selectedYear + 1);
+                }}>
+                <Feather name="chevron-right" size={24} color={COLORS.white} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Month selector */}
+            <View style={styles.monthsContainer}>
+              {moment.months().map((month, index) => (
+                <TouchableOpacity
+                  key={month}
+                  style={[
+                    styles.monthItem,
+                    selectedMonth === index && styles.selectedMonthItem,
+                  ]}
+                  onPress={() => setSelectedMonth(index)}>
+                  <Text
+                    style={[
+                      styles.monthItemText,
+                      selectedMonth === index && styles.selectedMonthItemText,
+                    ]}>
+                    {month}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Action buttons */}
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.modalButton}
+                onPress={() => setMonthPickerVisible(false)}>
+                <Text style={styles.modalButtonText}>Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.modalButton, styles.primaryButton]}
+                onPress={() => {
+                  // Format the new date with selected month & year
+                  const newVisibleMonth = moment()
+                    .year(selectedYear)
+                    .month(selectedMonth)
+                    .date(1)
+                    .format('YYYY-MM-DD');
+
+                  setCurrentVisibleMonth(newVisibleMonth);
+                  setCurrentMonthName(
+                    moment(newVisibleMonth).format('MMMM YYYY'),
+                  );
+                  setMonthPickerVisible(false);
+                }}>
+                <Text style={styles.modalButtonText}>Go to Month</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 };
@@ -617,6 +855,191 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 5,
     elevation: 6,
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+  },
+  modalContent: {
+    backgroundColor: COLORS.surface,
+    width: '90%',
+    maxWidth: 400,
+    borderRadius: BORDERS.radiusMedium,
+    padding: SPACING.l,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  modalTitle: {
+    fontSize: FONT_SIZES.h4,
+    fontWeight: FONT_WEIGHTS.bold,
+    color: COLORS.white,
+    marginBottom: SPACING.m,
+    textAlign: 'center',
+  },
+  modalCloseButton: {
+    marginTop: SPACING.m,
+    backgroundColor: COLORS.primary,
+    paddingVertical: SPACING.s,
+    paddingHorizontal: SPACING.l,
+    borderRadius: BORDERS.radiusMedium,
+  },
+  modalCloseButtonText: {
+    color: COLORS.white,
+    fontWeight: FONT_WEIGHTS.medium,
+    fontSize: FONT_SIZES.body,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  yearSelector: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: SPACING.m,
+    paddingHorizontal: SPACING.m,
+  },
+  yearButton: {
+    padding: SPACING.s,
+  },
+  yearText: {
+    fontSize: FONT_SIZES.h4,
+    fontWeight: FONT_WEIGHTS.bold,
+    color: COLORS.white,
+  },
+  monthsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginBottom: SPACING.l,
+  },
+  monthItem: {
+    width: '30%',
+    padding: SPACING.s,
+    alignItems: 'center',
+    marginBottom: SPACING.s,
+    borderRadius: BORDERS.radiusSmall,
+    backgroundColor: COLORS.background,
+  },
+  selectedMonthItem: {
+    backgroundColor: COLORS.primary,
+  },
+  monthItemText: {
+    color: COLORS.textLight,
+  },
+  selectedMonthItemText: {
+    color: COLORS.white,
+    fontWeight: FONT_WEIGHTS.bold,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  modalButton: {
+    paddingVertical: SPACING.s,
+    paddingHorizontal: SPACING.m,
+    borderRadius: BORDERS.radiusSmall,
+    flex: 1,
+    marginHorizontal: SPACING.xs,
+    alignItems: 'center',
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  primaryButton: {
+    backgroundColor: COLORS.primary,
+    borderWidth: 0,
+  },
+  modalButtonText: {
+    color: COLORS.white,
+    fontSize: FONT_SIZES.body,
+    fontWeight: FONT_WEIGHTS.medium,
+  },
+  calendarHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: COLORS.primaryDark,
+    paddingVertical: SPACING.m,
+    paddingHorizontal: SPACING.s,
+    borderTopLeftRadius: BORDERS.radiusMedium,
+    borderTopRightRadius: BORDERS.radiusMedium,
+  },
+  calendarHeaderText: {
+    fontSize: FONT_SIZES.h4,
+    fontWeight: FONT_WEIGHTS.bold,
+    color: COLORS.white,
+    textAlign: 'center',
+  },
+  monthNavButton: {
+    padding: SPACING.s,
+    width: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  monthYearDisplay: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1,
+  },
+  weekdayHeader: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.primary,
+    paddingTop: SPACING.xs,
+    paddingBottom: SPACING.xs,
+  },
+  inlineMonthYearPicker: {
+    backgroundColor: COLORS.primaryDark,
+    padding: SPACING.s,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  yearPickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: SPACING.xs,
+  },
+  yearPickerText: {
+    fontSize: FONT_SIZES.body,
+    fontWeight: FONT_WEIGHTS.bold,
+    color: COLORS.white,
+    paddingHorizontal: SPACING.m,
+  },
+  yearArrow: {
+    padding: SPACING.xs,
+  },
+  monthGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginTop: SPACING.xs,
+  },
+  monthGridItem: {
+    width: '24%',
+    padding: SPACING.xs,
+    marginBottom: SPACING.xs,
+    alignItems: 'center',
+    borderRadius: BORDERS.radiusSmall,
+  },
+  selectedMonthGridItem: {
+    backgroundColor: COLORS.primary,
+  },
+  monthGridItemText: {
+    color: COLORS.textLight,
+    fontSize: FONT_SIZES.small,
+  },
+  selectedMonthGridItemText: {
+    color: COLORS.white,
+    fontWeight: FONT_WEIGHTS.bold,
   },
 });
 

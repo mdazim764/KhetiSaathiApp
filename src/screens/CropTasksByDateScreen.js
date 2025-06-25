@@ -40,6 +40,33 @@ const TaskItem = ({item, index, numColumns}) => {
   const isSystemTask =
     item.isSystemTask !== undefined ? item.isSystemTask : true;
 
+  // Check if location data is actually available
+  const hasLocation =
+    item.city &&
+    item.city !== 'Unknown City' &&
+    item.state &&
+    item.state !== 'Unknown State';
+
+  // Add this function to handle location display
+  const getLocationDisplay = () => {
+    const cityText = item.city || 'Unknown City';
+    const stateText = item.state || 'Unknown State';
+    const countryText = item.country || 'India';
+
+    // For system tasks, show all location info
+    if (isSystemTask) {
+      return `${cityText}, ${stateText}, ${countryText}`;
+    }
+
+    // For custom tasks, only show valid parts
+    const parts = [];
+    if (item.city && item.city !== 'Unknown City') parts.push(item.city);
+    if (item.state && item.state !== 'Unknown State') parts.push(item.state);
+    if (item.country && item.country !== 'Unknown Country') parts.push(item.country);
+
+    return parts.length > 0 ? parts.join(', ') : 'Location not specified';
+  };
+
   const cardStyle = [
     themedStyles.taskCard,
     numColumns > 1 && themedStyles.taskCardMultiColumn,
@@ -52,20 +79,31 @@ const TaskItem = ({item, index, numColumns}) => {
       style={cardStyle}
       entering={FadeInDown.delay(index * 50).duration(300)}>
       <View style={themedStyles.taskHeader}>
+        {/* Task Type Icon */}
         <MaterialCommunityIcons
           name={isSystemTask ? 'robot' : 'account-edit'}
           size={isTablet ? 24 : 20}
           color={isSystemTask ? COLORS.accent : COLORS.primary}
         />
+
+        {/* Task Name/Title */}
         <Text style={themedStyles.taskName}>
-          {item.task || 'Task'}
+          {item.task || item.taskName || 'Task'}
           <Text style={themedStyles.taskSource}>
             {isSystemTask ? ' (AI)' : ' (Custom)'}
           </Text>
         </Text>
+
+        {/* Priority Badge - For all system tasks and custom tasks with priority */}
+        {(isSystemTask || item.priority === 'high') && (
+          <View style={themedStyles.priorityBadge}>
+            <Text style={themedStyles.priorityBadgeText}>HIGH</Text>
+          </View>
+        )}
       </View>
 
       <View style={themedStyles.taskDetailsContainer}>
+        {/* Crop Name */}
         <View style={themedStyles.taskDetailRow}>
           <MaterialCommunityIcons
             name="seed-outline"
@@ -78,19 +116,22 @@ const TaskItem = ({item, index, numColumns}) => {
           </Text>
         </View>
 
-        <View style={themedStyles.taskDetailRow}>
-          <MaterialCommunityIcons
-            name="map-marker-outline"
-            size={isTablet ? 18 : 16}
-            color={COLORS.textLight}
-            style={themedStyles.detailIcon}
-          />
-          <Text style={themedStyles.taskDetailText}>
-            {item.city || 'Unknown City'}, {item.state || 'Unknown State'},
-            {item.country || 'Unknown Country'}
-          </Text>
-        </View>
+        {/* Location - Only show if valid location exists */}
+        {(isSystemTask || hasLocation) && (
+          <View style={themedStyles.taskDetailRow}>
+            <MaterialCommunityIcons
+              name="map-marker-outline"
+              size={isTablet ? 18 : 16}
+              color={COLORS.textLight}
+              style={themedStyles.detailIcon}
+            />
+            <Text style={themedStyles.taskDetailText}>
+              {getLocationDisplay()}
+            </Text>
+          </View>
+        )}
 
+        {/* Date */}
         {(item.date || (item.startDate && item.endDate)) && (
           <View style={themedStyles.taskDetailRow}>
             <MaterialCommunityIcons
@@ -111,31 +152,20 @@ const TaskItem = ({item, index, numColumns}) => {
           </View>
         )}
 
-        {/* Show priority indicator for custom tasks */}
-        {!isSystemTask && item.priority && (
+        {/* Priority indicator for custom tasks with medium or low priority */}
+        {!isSystemTask && item.priority && item.priority !== 'high' && (
           <View style={themedStyles.taskDetailRow}>
             <MaterialCommunityIcons
               name="flag"
               size={isTablet ? 18 : 16}
-              color={
-                item.priority === 'high'
-                  ? '#e74c3c'
-                  : item.priority === 'medium'
-                  ? '#f39c12'
-                  : '#2ecc71'
-              }
+              color={item.priority === 'medium' ? '#f39c12' : '#2ecc71'}
               style={themedStyles.detailIcon}
             />
             <Text
               style={[
                 themedStyles.taskDetailText,
                 {
-                  color:
-                    item.priority === 'high'
-                      ? '#e74c3c'
-                      : item.priority === 'medium'
-                      ? '#f39c12'
-                      : '#2ecc71',
+                  color: item.priority === 'medium' ? '#f39c12' : '#2ecc71',
                 },
               ]}>
               {item.priority.charAt(0).toUpperCase() + item.priority.slice(1)}{' '}
@@ -145,6 +175,7 @@ const TaskItem = ({item, index, numColumns}) => {
         )}
       </View>
 
+      {/* Description - Show for both system and custom tasks */}
       {item.description && item.description !== 'No description available' && (
         <View style={themedStyles.descriptionContainer}>
           <Text style={themedStyles.descriptionLabel}>Description</Text>
@@ -152,6 +183,7 @@ const TaskItem = ({item, index, numColumns}) => {
         </View>
       )}
 
+      {/* Tips - Usually for system-generated tasks */}
       {item.tip && item.tip !== 'No adjustment needed' && (
         <View style={themedStyles.tipContainer}>
           <MaterialCommunityIcons
@@ -1103,6 +1135,18 @@ const themedStyles = StyleSheet.create({
     fontSize: isTablet ? FONT_SIZES.body * 0.8 : FONT_SIZES.caption,
     color: COLORS.textLight,
     fontWeight: FONT_WEIGHTS.medium,
+  },
+  priorityBadge: {
+    backgroundColor: '#e74c3c',
+    paddingHorizontal: SPACING.s,
+    paddingVertical: 2,
+    borderRadius: BORDERS.radiusSmall,
+    marginLeft: SPACING.s,
+  },
+  priorityBadgeText: {
+    color: COLORS.white,
+    fontSize: isTablet ? FONT_SIZES.small : 10,
+    fontWeight: FONT_WEIGHTS.bold,
   },
 });
 

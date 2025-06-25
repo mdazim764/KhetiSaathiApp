@@ -73,8 +73,10 @@ const CalendarScreen = ({navigation}) => {
 
   // Handle month change in calendar
   const onMonthChange = month => {
+    // Ensure month has leading zero if needed
+    const formattedMonth = month.month.toString().padStart(2, '0');
     setCurrentMonthName(
-      moment(`${month.year}-${month.month}-01`).format('MMMM YYYY'),
+      moment(`${month.year}-${formattedMonth}-01`).format('MMMM YYYY'),
     );
   };
 
@@ -161,8 +163,8 @@ const CalendarScreen = ({navigation}) => {
                     cropName: crop.crop_name || crop.crop || 'Unknown Crop',
                     date: dateStr,
                     color: dotColor,
-                    isSystemTask: true, // Mark as system-generated
-                    // Add location information
+                    isSystemTask: true,
+                    // Always include location for system tasks, even if it's "Unknown"
                     city: crop.city || crop.district || '',
                     state: crop.state || '',
                     country: crop.country || 'India',
@@ -205,10 +207,16 @@ const CalendarScreen = ({navigation}) => {
               priority: task.priority,
               taskType: task.taskType,
               isSystemTask: false,
-              // Add location information
-              city: task.city || task.district || '',
-              state: task.state || '',
-              country: task.country || 'India',
+              // Only include location if it's valid
+              ...(task.city &&
+                task.city !== 'NA' &&
+                task.city !== '' && {city: task.city || task.district}),
+              ...(task.state &&
+                task.state !== 'NA' &&
+                task.state !== '' && {state: task.state}),
+              ...(task.country &&
+                task.country !== 'NA' &&
+                task.country !== '' && {country: task.country || 'India'}),
               // Choose color based on task type or priority
               color:
                 task.taskType === 'irrigation'
@@ -299,14 +307,30 @@ const CalendarScreen = ({navigation}) => {
       onPress={() => {
         // Get all events for the selected date
         const tasksForDate = events[selectedDate] || [];
-        
+
+        // Clean up the task data before passing to the details screen
+        const cleanedTasks = tasksForDate.map(task => ({
+          ...task,
+          // Add task description if missing
+          description:
+            task.description ||
+            (task.isSystemTask
+              ? `${task.taskName} for ${task.cropName} on ${moment(
+                  task.date,
+                ).format('MMMM D, YYYY')}`
+              : undefined),
+          // Mark system tasks as high priority
+          priority: task.isSystemTask ? 'high' : task.priority,
+        }));
+
         navigation.navigate('CalendarTab', {
           screen: 'CropTasksByDate',
           params: {
-            tasks: tasksForDate,
+            tasks: cleanedTasks,
             date: selectedDate,
             selectedTaskId: item.id,
-            isSystemTask: item.isSystemTask !== undefined ? item.isSystemTask : true
+            isSystemTask:
+              item.isSystemTask !== undefined ? item.isSystemTask : true,
           },
         });
       }}>
@@ -316,7 +340,7 @@ const CalendarScreen = ({navigation}) => {
       <View style={styles.eventContent}>
         <Text style={styles.eventTitle}>
           {item.taskName}
-          {item.isSystemTask === false && " (Custom)"}
+          {item.isSystemTask === false && ' (Custom)'}
         </Text>
         <Text style={styles.eventSubtitle}>{item.cropName}</Text>
       </View>
@@ -388,6 +412,11 @@ const CalendarScreen = ({navigation}) => {
                   onMonthChange={onMonthChange}
                   markedDates={markedDates}
                   enableSwipeMonths={true}
+                  // Add these lines to extend navigation range
+                  minDate={'2020-01-01'} // Allow navigation back to 2020
+                  maxDate={'2030-12-31'} // Allow navigation forward to 2030
+                  pastScrollRange={60} // Allow scrolling 60 months into the past
+                  futureScrollRange={60} // Allow scrolling 60 months into the future
                   theme={{
                     backgroundColor: COLORS.surface,
                     calendarBackground: COLORS.surface,
@@ -414,7 +443,6 @@ const CalendarScreen = ({navigation}) => {
                   }}
                 />
               </View>
-
               {/* Selected Date Events Header */}
               <View style={styles.selectedDateHeader}>
                 <Text style={styles.selectedDateText}>

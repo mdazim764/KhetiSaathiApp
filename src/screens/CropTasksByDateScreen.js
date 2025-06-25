@@ -16,10 +16,11 @@ import {
 } from 'react-native';
 import dayjs from 'dayjs';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-
+import moment from 'moment';
 import Animated, {FadeInDown} from 'react-native-reanimated';
 
 import env from '../config/env';
+import {getStoredLocation} from '../utils/locationUtils';
 
 import theme from '../constants/theme';
 const {COLORS, FONT_SIZES, FONT_WEIGHTS, SPACING, BORDERS} = theme;
@@ -36,9 +37,14 @@ const tipColors = [COLORS.primaryLight, '#F8EEDF', '#DBFFCB', '#EEF1DA'];
 
 // --- Task Item Component ---
 const TaskItem = ({item, index, numColumns}) => {
+  const isSystemTask =
+    item.isSystemTask !== undefined ? item.isSystemTask : true;
+
   const cardStyle = [
     themedStyles.taskCard,
     numColumns > 1 && themedStyles.taskCardMultiColumn,
+    item.isSelected && themedStyles.selectedTaskCard,
+    isSystemTask ? themedStyles.systemTaskCard : themedStyles.userTaskCard,
   ];
 
   return (
@@ -47,12 +53,18 @@ const TaskItem = ({item, index, numColumns}) => {
       entering={FadeInDown.delay(index * 50).duration(300)}>
       <View style={themedStyles.taskHeader}>
         <MaterialCommunityIcons
-          name="format-list-checks"
+          name={isSystemTask ? 'robot' : 'account-edit'}
           size={isTablet ? 24 : 20}
-          color={COLORS.primary}
+          color={isSystemTask ? COLORS.accent : COLORS.primary}
         />
-        <Text style={themedStyles.taskName}>{item.task || 'Task'}</Text>
+        <Text style={themedStyles.taskName}>
+          {item.task || 'Task'}
+          <Text style={themedStyles.taskSource}>
+            {isSystemTask ? ' (AI)' : ' (Custom)'}
+          </Text>
+        </Text>
       </View>
+
       <View style={themedStyles.taskDetailsContainer}>
         <View style={themedStyles.taskDetailRow}>
           <MaterialCommunityIcons
@@ -62,9 +74,10 @@ const TaskItem = ({item, index, numColumns}) => {
             style={themedStyles.detailIcon}
           />
           <Text style={themedStyles.taskDetailText}>
-            {item.crop_name || 'Unknown Crop'}
+            {item.crop_name || item.cropName || 'Unknown Crop'}
           </Text>
         </View>
+
         <View style={themedStyles.taskDetailRow}>
           <MaterialCommunityIcons
             name="map-marker-outline"
@@ -73,7 +86,7 @@ const TaskItem = ({item, index, numColumns}) => {
             style={themedStyles.detailIcon}
           />
           <Text style={themedStyles.taskDetailText}>
-            {item.city || 'Unknown City'},{item.state || 'Unknown State'},
+            {item.city || 'Unknown City'}, {item.state || 'Unknown State'},
             {item.country || 'Unknown Country'}
           </Text>
         </View>
@@ -97,13 +110,48 @@ const TaskItem = ({item, index, numColumns}) => {
             </Text>
           </View>
         )}
+
+        {/* Show priority indicator for custom tasks */}
+        {!isSystemTask && item.priority && (
+          <View style={themedStyles.taskDetailRow}>
+            <MaterialCommunityIcons
+              name="flag"
+              size={isTablet ? 18 : 16}
+              color={
+                item.priority === 'high'
+                  ? '#e74c3c'
+                  : item.priority === 'medium'
+                  ? '#f39c12'
+                  : '#2ecc71'
+              }
+              style={themedStyles.detailIcon}
+            />
+            <Text
+              style={[
+                themedStyles.taskDetailText,
+                {
+                  color:
+                    item.priority === 'high'
+                      ? '#e74c3c'
+                      : item.priority === 'medium'
+                      ? '#f39c12'
+                      : '#2ecc71',
+                },
+              ]}>
+              {item.priority.charAt(0).toUpperCase() + item.priority.slice(1)}{' '}
+              Priority
+            </Text>
+          </View>
+        )}
       </View>
+
       {item.description && item.description !== 'No description available' && (
         <View style={themedStyles.descriptionContainer}>
-          <Text style={themedStyles.descriptionLabel}>Description</Text>       
-            <Text style={themedStyles.descriptionText}>{item.description}</Text>
+          <Text style={themedStyles.descriptionLabel}>Description</Text>
+          <Text style={themedStyles.descriptionText}>{item.description}</Text>
         </View>
       )}
+
       {item.tip && item.tip !== 'No adjustment needed' && (
         <View style={themedStyles.tipContainer}>
           <MaterialCommunityIcons
@@ -114,12 +162,11 @@ const TaskItem = ({item, index, numColumns}) => {
           />
 
           <View style={themedStyles.tipContent}>
-              <Text style={themedStyles.tipLabel}>Tip</Text>         
+            <Text style={themedStyles.tipLabel}>Tip</Text>
             <Text style={themedStyles.tipText}>{item.tip}</Text>
           </View>
         </View>
       )}
-       
     </Animated.View>
   );
 };
@@ -127,7 +174,58 @@ const TaskItem = ({item, index, numColumns}) => {
 
 // Added navigation prop here to fix the goBack issue
 const CropTasksByDateScreen = ({route, navigation}) => {
-  const {tasks, date} = route.params;
+  // Extract all parameters - updated to handle both formats
+  const {tasks, date, selectedTaskId, isSystemTask} = route.params;
+
+  // If no tasks were passed, show an empty state
+  if (!tasks || tasks.length === 0) {
+    return (
+      <SafeAreaView style={themedStyles.safeArea}>
+        <StatusBar
+          barStyle="dark-content"
+          backgroundColor={COLORS.background}
+        />
+        <View
+          style={[
+            themedStyles.container,
+            isTablet && themedStyles.containerTablet,
+          ]}>
+          <View style={themedStyles.emptyContainer}>
+            <MaterialCommunityIcons
+              name="calendar-search"
+              size={isTablet ? 80 : 60}
+              color={COLORS.disabled}
+            />
+            <Text style={themedStyles.emptyText}>
+              No tasks found for {moment(date).format('MMMM D, YYYY')}.
+            </Text>
+            <TouchableOpacity
+              style={themedStyles.addTaskButton}
+              onPress={() =>
+                navigation.navigate('CalendarTab', {
+                  screen: 'AddTask',
+                  params: {date: date},
+                })
+              }>
+              <Text style={themedStyles.addTaskButtonText}>Add Task</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Enhance tasks with type info if it's not already there
+  const [enhancedTasks, setEnhancedTasks] = useState(
+    tasks.map(task => ({
+      ...task,
+      isSystemTask:
+        task.isSystemTask !== undefined ? task.isSystemTask : isSystemTask,
+      // Highlight the selected task
+      isSelected: task.id === selectedTaskId,
+    })),
+  );
+
   const formattedDate = dayjs(date).format('dddd,\n MMMM D, YYYY');
   const numColumns = isTablet ? 2 : 1;
 
@@ -136,23 +234,27 @@ const CropTasksByDateScreen = ({route, navigation}) => {
   const [tips, setTips] = useState(null);
   const [tipsLoading, setTipsLoading] = useState(false);
 
-  const locationQuery =
-    tasks &&
-    tasks.length > 0 &&
-    tasks[0].city &&
-    tasks[0].city !== 'Unknown City'
-      ? tasks[0].city
-      : tasks &&
-        tasks.length > 0 &&
-        tasks[0].state &&
-        tasks[0].state !== 'Unknown State'
-      ? tasks[0].state
-      : tasks &&
-        tasks.length > 0 &&
-        tasks[0].country &&
-        tasks[0].country !== 'Unknown Country'
-      ? tasks[0].country
-      : 'Pune';
+  const locationQuery = React.useMemo(() => {
+    // First try to get location from tasks
+    if (enhancedTasks && enhancedTasks.length > 0) {
+      // Try city first
+      for (const task of enhancedTasks) {
+        if (task.city && task.city !== 'Unknown City') {
+          return task.city;
+        }
+      }
+
+      // Try state if no city
+      for (const task of enhancedTasks) {
+        if (task.state && task.state !== 'Unknown State') {
+          return task.state;
+        }
+      }
+    }
+
+    // Default fallback
+    return 'Pune';
+  }, [enhancedTasks]);
 
   useEffect(() => {
     const fetchWeather = async () => {
@@ -364,7 +466,19 @@ const CropTasksByDateScreen = ({route, navigation}) => {
         size={isTablet ? 80 : 60}
         color={COLORS.disabled}
       />
-      <Text style={themedStyles.emptyText}>No tasks found for this date.</Text> 
+      <Text style={themedStyles.emptyText}>
+        No tasks found for {moment(date).format('MMMM D, YYYY')}.
+      </Text>
+      <TouchableOpacity
+        style={themedStyles.addTaskButton}
+        onPress={() =>
+          navigation.navigate('CalendarTab', {
+            screen: 'AddTask',
+            params: {date: date},
+          })
+        }>
+        <Text style={themedStyles.addTaskButtonText}>Add Task</Text>
+      </TouchableOpacity>
     </View>
   );
 
@@ -493,6 +607,102 @@ const CropTasksByDateScreen = ({route, navigation}) => {
        
     </View>
   );
+
+  useEffect(() => {
+    const updateMissingLocations = async () => {
+      if (!tasks || tasks.length === 0) return;
+
+      // Check if we have location data
+      const hasLocation = tasks.some(
+        task =>
+          (task.city && task.city !== 'Unknown City') ||
+          (task.state && task.state !== 'Unknown State'),
+      );
+
+      // If no location data, try to use stored location
+      if (!hasLocation) {
+        try {
+          // Try to get city from stored coordinates
+          const locationData = await getCityFromStoredLocation();
+
+          if (locationData) {
+            // Create a new array with updated location data
+            const updatedTasks = tasks.map(task => ({
+              ...task,
+              city: locationData.city,
+              state: locationData.state,
+              country: locationData.country,
+            }));
+
+            // Update the tasks with location data
+            setEnhancedTasks(updatedTasks);
+          }
+        } catch (error) {
+          console.error('Error getting location data:', error);
+        }
+      }
+    };
+
+    updateMissingLocations();
+  }, [tasks]);
+
+  const getCityFromStoredLocation = async () => {
+    try {
+      const storedLocation = await getStoredLocation();
+      if (
+        storedLocation &&
+        storedLocation.latitude &&
+        storedLocation.longitude
+      ) {
+        return await getCityNameFromCoordinates(
+          storedLocation.latitude,
+          storedLocation.longitude,
+        );
+      }
+    } catch (error) {
+      console.error('Error getting city from stored location:', error);
+    }
+    return null;
+  };
+
+  const getCityNameFromCoordinates = async (latitude, longitude) => {
+    const apiUrl = `${env.NOMINATIM_API_BASE}/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}&accept-language=en`;
+
+    try {
+      const response = await fetch(apiUrl, {
+        headers: {
+          'User-Agent': 'KhetiSaathi/1.0',
+          Accept: 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        console.error(
+          'Nominatim API error:',
+          response.status,
+          response.statusText,
+        );
+        return null;
+      }
+
+      const data = await response.json();
+      if (data.address) {
+        return {
+          city:
+            data.address.city ||
+            data.address.town ||
+            data.address.village ||
+            data.address.county ||
+            'Unknown City',
+          state: data.address.state || 'Unknown State',
+          country: data.address.country || 'India',
+        };
+      }
+    } catch (error) {
+      console.error('Reverse geocoding error:', error);
+    }
+    return null;
+  };
 
   return (
     <SafeAreaView style={themedStyles.safeArea}>
@@ -860,6 +1070,39 @@ const themedStyles = StyleSheet.create({
     marginTop: SPACING.m,
     fontSize: isTablet ? FONT_SIZES.h4 : FONT_SIZES.body,
     color: COLORS.textLight,
+  },
+  selectedTaskCard: {
+    borderColor: COLORS.accent,
+    borderWidth: 2,
+  },
+  systemTaskCard: {
+    borderLeftWidth: 4,
+    borderLeftColor: COLORS.accent,
+  },
+  userTaskCard: {
+    borderLeftWidth: 4,
+    borderLeftColor: COLORS.primary,
+  },
+  addTaskButton: {
+    backgroundColor: COLORS.primary,
+    paddingVertical: SPACING.s,
+    paddingHorizontal: SPACING.l,
+    borderRadius: BORDERS.radiusMedium,
+    marginTop: SPACING.m,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+  },
+  addTaskButtonText: {
+    color: COLORS.white,
+    fontSize: FONT_SIZES.body,
+    fontWeight: FONT_WEIGHTS.bold,
+    marginLeft: SPACING.xs,
+  },
+  taskSource: {
+    fontSize: isTablet ? FONT_SIZES.body * 0.8 : FONT_SIZES.caption,
+    color: COLORS.textLight,
+    fontWeight: FONT_WEIGHTS.medium,
   },
 });
 

@@ -116,6 +116,7 @@ import GenerateCropScheduleScreen from './screens/GenerateCropScheduleScreen';
 import UpcomingTasksScreen from './screens/UpcomingTasksScreen';
 import NotificationScreen from './screens/NotificationScreen';
 import SplashScreen from './screens/SplashScreen';
+import AddTaskScreen from './screens/AddTaskScreen';
 
 // Import the theme constants
 import theme from './constants/theme';
@@ -139,6 +140,11 @@ const CalendarStack = () => (
     <Stack.Screen name="Calendar" component={CalendarScreen} />
     <Stack.Screen name="CropTasksByDate" component={CropTasksByDateScreen} />
     <Stack.Screen name="GenerateCrop" component={GenerateCropScheduleScreen} />
+    <Stack.Screen
+      name="AddTask"
+      component={AddTaskScreen}
+      options={{headerShown: false}}
+    />
   </Stack.Navigator>
 );
 

@@ -112,7 +112,7 @@ const CropListScreen = ({navigation}) => {
         <MaterialCommunityIcons
           name="pencil-outline"
           size={isTablet ? 28 : 24}
-          color={COLORS.white}
+          color={COLORS.success}
         />
         <Text style={themedStyles.actionText}>Edit</Text>
       </TouchableOpacity>
@@ -173,7 +173,7 @@ const CropListScreen = ({navigation}) => {
           <TouchableOpacity
             style={themedStyles.cardContent}
             activeOpacity={0.7}
-            onPress={() => navigation.navigate('CropDetail', {crop: item})}>
+            onPress={() => navigation.navigate('CropDetails', {crop: item})}>
             <View style={themedStyles.cropIconContainer}>
               <MaterialCommunityIcons
                 name="sprout"
@@ -207,6 +207,30 @@ const CropListScreen = ({navigation}) => {
               </View>
             </View>
 
+            {/* Action Buttons - always visible */}
+            <View style={themedStyles.actionButtonsContainer}>
+              <TouchableOpacity
+                style={themedStyles.actionButton}
+                onPress={() => handleEditCrop(item)}>
+                <MaterialCommunityIcons
+                  name="pencil-outline"
+                  size={isTablet ? 22 : 18}
+                  color={COLORS.success}
+                />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={themedStyles.actionButton}
+                onPress={() => handleDeleteCrop(item.uniqueId)}>
+                <MaterialIcons
+                  name="delete-outline"
+                  size={isTablet ? 22 : 18}
+                  color={COLORS.error}
+                />
+              </TouchableOpacity>
+            </View>
+
+            {/* Navigation indicator */}
             <MaterialCommunityIcons
               name="chevron-right"
               size={isTablet ? 28 : 24}
@@ -557,6 +581,20 @@ const themedStyles = StyleSheet.create({
     elevation: 3,
     borderLeftWidth: 4,
     borderLeftColor: COLORS.accent,
+  },
+  actionButtonsContainer: {
+    flexDirection: 'column',
+    marginRight: SPACING.s,
+    justifyContent: 'space-between',
+  },
+  actionButton: {
+    padding: SPACING.xs,
+    marginHorizontal: 2,
+    borderRadius: BORDERS.radiusSmall,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+    marginBottom: 10,
   },
 });
 

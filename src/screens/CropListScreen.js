@@ -173,7 +173,7 @@ const CropListScreen = ({navigation}) => {
           <TouchableOpacity
             style={themedStyles.cardContent}
             activeOpacity={0.7}
-            onPress={() => navigation.navigate('CropDetails', {crop: item})}>
+            onPress={() => navigation.navigate('CropDetail', {crop: item})}>
             <View style={themedStyles.cropIconContainer}>
               <MaterialCommunityIcons
                 name="sprout"

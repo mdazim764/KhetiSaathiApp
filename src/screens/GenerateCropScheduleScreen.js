@@ -335,14 +335,6 @@ const GenerateCropScheduleScreen = ({navigation, route}) => {
     }
   };
 
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
-    );
-  }
-
   return (
     <SafeAreaView style={styles.safeArea}>
       <LinearGradient
@@ -364,7 +356,7 @@ const GenerateCropScheduleScreen = ({navigation, route}) => {
       {loading ? (
         <View style={styles.loadingContainer}>
           <LottieView
-            source={require('../assets/animations/Animation-loading.json')}
+            source={require('../assets/animations/Animation-schedule-generating.json')}
             autoPlay
             loop
             style={{width: 150, height: 150}}
@@ -396,6 +388,10 @@ const GenerateCropScheduleScreen = ({navigation, route}) => {
                 />
                 <Dropdown
                   style={styles.dropdown}
+                  containerStyle={styles.dropdownContainer}
+                  itemContainerStyle={styles.dropdownItemContainer}
+                  itemTextStyle={styles.dropdownItemText}
+                  activeColor={COLORS.primaryLight}
                   selectedTextStyle={styles.dropdownText}
                   data={countryData}
                   labelField="label"
@@ -405,6 +401,24 @@ const GenerateCropScheduleScreen = ({navigation, route}) => {
                   placeholderStyle={styles.placeholderStyle}
                   search
                   searchPlaceholder="Search country..."
+                  searchTextInputStyle={styles.searchTextInput}
+                  iconStyle={styles.dropdownIcon}
+                  maxHeight={300}
+                  renderItem={(item, selected) => (
+                    <View
+                      style={[
+                        styles.dropdownItem,
+                        selected && styles.dropdownItemSelected,
+                      ]}>
+                      <Text
+                        style={[
+                          styles.dropdownItemText,
+                          selected && styles.dropdownItemTextSelected,
+                        ]}>
+                        {item.label}
+                      </Text>
+                    </View>
+                  )}
                 />
               </View>
             </View>
@@ -421,6 +435,10 @@ const GenerateCropScheduleScreen = ({navigation, route}) => {
                 />
                 <Dropdown
                   style={styles.dropdown}
+                  containerStyle={styles.dropdownContainer}
+                  itemContainerStyle={styles.dropdownItemContainer}
+                  itemTextStyle={styles.dropdownItemText}
+                  activeColor={COLORS.primaryLight}
                   selectedTextStyle={styles.dropdownText}
                   data={stateData}
                   labelField="label"
@@ -431,6 +449,24 @@ const GenerateCropScheduleScreen = ({navigation, route}) => {
                   placeholderStyle={styles.placeholderStyle}
                   search
                   searchPlaceholder="Search state..."
+                  searchTextInputStyle={styles.searchTextInput}
+                  iconStyle={styles.dropdownIcon}
+                  maxHeight={300}
+                  renderItem={(item, selected) => (
+                    <View
+                      style={[
+                        styles.dropdownItem,
+                        selected && styles.dropdownItemSelected,
+                      ]}>
+                      <Text
+                        style={[
+                          styles.dropdownItemText,
+                          selected && styles.dropdownItemTextSelected,
+                        ]}>
+                        {item.label}
+                      </Text>
+                    </View>
+                  )}
                 />
               </View>
             </View>
@@ -447,6 +483,10 @@ const GenerateCropScheduleScreen = ({navigation, route}) => {
                 />
                 <Dropdown
                   style={styles.dropdown}
+                  containerStyle={styles.dropdownContainer}
+                  itemContainerStyle={styles.dropdownItemContainer}
+                  itemTextStyle={styles.dropdownItemText}
+                  activeColor={COLORS.primaryLight}
                   selectedTextStyle={styles.dropdownText}
                   data={cityList.map(item => ({label: item, value: item}))}
                   labelField="label"
@@ -457,6 +497,24 @@ const GenerateCropScheduleScreen = ({navigation, route}) => {
                   placeholderStyle={styles.placeholderStyle}
                   search
                   searchPlaceholder="Search district..."
+                  searchTextInputStyle={styles.searchTextInput}
+                  iconStyle={styles.dropdownIcon}
+                  maxHeight={300}
+                  renderItem={(item, selected) => (
+                    <View
+                      style={[
+                        styles.dropdownItem,
+                        selected && styles.dropdownItemSelected,
+                      ]}>
+                      <Text
+                        style={[
+                          styles.dropdownItemText,
+                          selected && styles.dropdownItemTextSelected,
+                        ]}>
+                        {item.label}
+                      </Text>
+                    </View>
+                  )}
                 />
               </View>
             </View>
@@ -473,6 +531,10 @@ const GenerateCropScheduleScreen = ({navigation, route}) => {
                 />
                 <Dropdown
                   style={styles.dropdown}
+                  containerStyle={styles.dropdownContainer}
+                  itemContainerStyle={styles.dropdownItemContainer}
+                  itemTextStyle={styles.dropdownItemText}
+                  activeColor={COLORS.primaryLight}
                   selectedTextStyle={styles.dropdownText}
                   data={crops
                     .map(item => ({label: item, value: item}))
@@ -488,6 +550,24 @@ const GenerateCropScheduleScreen = ({navigation, route}) => {
                   placeholderStyle={styles.placeholderStyle}
                   search
                   searchPlaceholder="Search crop..."
+                  searchTextInputStyle={styles.searchTextInput}
+                  iconStyle={styles.dropdownIcon}
+                  maxHeight={300}
+                  renderItem={(item, selected) => (
+                    <View
+                      style={[
+                        styles.dropdownItem,
+                        selected && styles.dropdownItemSelected,
+                      ]}>
+                      <Text
+                        style={[
+                          styles.dropdownItemText,
+                          selected && styles.dropdownItemTextSelected,
+                        ]}>
+                        {item.label}
+                      </Text>
+                    </View>
+                  )}
                 />
               </View>
             </View>
@@ -529,6 +609,10 @@ const GenerateCropScheduleScreen = ({navigation, route}) => {
                 />
                 <Dropdown
                   style={styles.dropdown}
+                  containerStyle={styles.dropdownContainer}
+                  itemContainerStyle={styles.dropdownItemContainer}
+                  itemTextStyle={styles.dropdownItemText}
+                  activeColor={COLORS.primaryLight}
                   selectedTextStyle={styles.dropdownText}
                   data={yearData}
                   labelField="label"
@@ -615,6 +699,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: SPACING.m,
     paddingBottom: SPACING.xxl,
+    flexGrow: 1,
   },
   formContainer: {
     backgroundColor: COLORS.surface,
@@ -626,6 +711,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    width: '100%', // Ensure full width
   },
   formGroup: {
     marginBottom: SPACING.m,
@@ -643,6 +729,7 @@ const styles = StyleSheet.create({
     borderRadius: BORDERS.radiusSmall,
     borderWidth: 1,
     borderColor: COLORS.border,
+    overflow: 'hidden', // Ensure content doesn't overflow rounded corners
   },
   inputIcon: {
     marginLeft: SPACING.s,
@@ -653,14 +740,55 @@ const styles = StyleSheet.create({
     height: isTablet ? 50 : 45,
     borderWidth: 0,
     backgroundColor: 'transparent',
+    paddingHorizontal: SPACING.s,
   },
   dropdownText: {
     fontSize: isTablet ? FONT_SIZES.body : FONT_SIZES.small,
-    color: COLORS.text,
+    color: COLORS.white,
+    fontWeight: FONT_WEIGHTS.medium,
   },
   placeholderStyle: {
     fontSize: isTablet ? FONT_SIZES.body : FONT_SIZES.small,
     color: COLORS.disabled,
+  },
+  dropdownContainer: {
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDERS.radiusSmall,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    marginTop: 4,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 6,
+    width: '85%',
+    alignSelf: 'center',
+    left: 0, // Ensure it's aligned with the left edge
+    right: 0, // Ensure it extends to the right edge
+    // position: 'absolute', // Use absolute positioning
+    zIndex: 1000, // Ensure it appears above other elements
+  },
+  dropdownItemContainer: {
+    backgroundColor: COLORS.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.05)',
+  },
+  dropdownItem: {
+    paddingVertical: SPACING.s,
+    paddingHorizontal: SPACING.m,
+  },
+  dropdownItemSelected: {
+    backgroundColor: 'rgba(76, 175, 80, 0.15)',
+  },
+  dropdownItemText: {
+    fontSize: isTablet ? FONT_SIZES.body : FONT_SIZES.small,
+    color: COLORS.text,
+  },
+  dropdownItemTextSelected: {
+    color: COLORS.success,
+    fontWeight: FONT_WEIGHTS.bold,
   },
   textInput: {
     flex: 1,
@@ -697,6 +825,20 @@ const styles = StyleSheet.create({
     fontSize: isTablet ? FONT_SIZES.body : FONT_SIZES.small,
     fontWeight: FONT_WEIGHTS.medium,
     color: COLORS.white,
+  },
+  searchTextInput: {
+    height: 40,
+    backgroundColor: COLORS.inputBackground,
+    borderRadius: BORDERS.radiusSmall,
+    padding: SPACING.s,
+    color: COLORS.white,
+    borderWidth: 0,
+    fontSize: FONT_SIZES.small,
+  },
+  dropdownIcon: {
+    width: 20,
+    height: 20,
+    tintColor: COLORS.accent,
   },
 });
 

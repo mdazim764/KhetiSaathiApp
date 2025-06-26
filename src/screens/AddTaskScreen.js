@@ -221,12 +221,27 @@ const AddTaskScreen = ({navigation, route}) => {
         <View style={styles.inputContainer}>
           <Text style={styles.inputLabel}>Task Date</Text>
           <TouchableOpacity
-            style={styles.datePickerButton}
+            style={[
+              styles.datePickerButton,
+              {borderColor: 'rgba(255,255,255,0.15)'},
+            ]}
             onPress={showDatepicker}>
-            <Text style={styles.dateText}>
-              {moment(formData.date).format('MMMM D, YYYY')}
-            </Text>
-            <Feather name="calendar" size={20} color={COLORS.accent} />
+            <View style={{flexDirection: 'row', alignItems: 'center'}}>
+              <MaterialCommunityIcons
+                name="calendar-month"
+                size={20}
+                color={COLORS.accent}
+                style={{marginRight: 8}}
+              />
+              <Text style={styles.dateText}>
+                {moment(formData.date).format('MMMM D, YYYY')}
+              </Text>
+            </View>
+            <MaterialCommunityIcons
+              name="chevron-down"
+              size={20}
+              color={COLORS.accent}
+            />
           </TouchableOpacity>
 
           {showDatePicker && (
@@ -234,9 +249,28 @@ const AddTaskScreen = ({navigation, route}) => {
               value={formData.date}
               mode="date"
               is24Hour={true}
-              display="default"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
               onChange={handleDateChange}
               minimumDate={new Date()}
+              // Theme styling for iOS
+              textColor={COLORS.white}
+              accentColor={COLORS.primary}
+              // Theme styling for Android
+              themeVariant="dark"
+              style={{
+                backgroundColor:
+                  Platform.OS === 'android' ? COLORS.surface : undefined,
+              }}
+              // For Android custom theming
+              androidMode="calendar"
+              // More Android-specific theme options
+              theme={{
+                backgroundColor: COLORS.surface,
+                headerBackgroundColor: COLORS.primary,
+                headerTextColor: COLORS.white,
+                textColor: COLORS.white,
+                calendarBackground: COLORS.surface,
+              }}
             />
           )}
         </View>
@@ -246,33 +280,61 @@ const AddTaskScreen = ({navigation, route}) => {
           <Text style={styles.inputLabel}>Related Crop</Text>
           {crops.length > 0 ? (
             <View style={styles.pickerContainer}>
-              <Picker
-                selectedValue={formData.cropId}
-                style={styles.picker}
-                dropdownIconColor={COLORS.accent}
-                onValueChange={(itemValue, itemIndex) => {
-                  if (itemValue) {
-                    const selectedCrop = crops.find(
-                      c => c.uniqueId === itemValue || c.id === itemValue,
-                    );
-                    setFormData(prev => ({
-                      ...prev,
-                      cropId: itemValue,
-                      cropName: selectedCrop
-                        ? selectedCrop.crop_name || selectedCrop.crop
-                        : '',
-                    }));
-                  }
-                }}>
-                <Picker.Item label="Select a crop" value="" />
-                {crops.map(crop => (
-                  <Picker.Item
-                    key={crop.uniqueId || crop.id}
-                    label={crop.crop_name || crop.crop || 'Unnamed Crop'}
-                    value={crop.uniqueId || crop.id}
+              <View style={styles.pickerOuterContainer}>
+                <View style={styles.pickerWrapper}>
+                  <Picker
+                    selectedValue={formData.cropId}
+                    style={styles.picker}
+                    dropdownIconColor={COLORS.accent}
+                    mode="dropdown"
+                    itemStyle={{color: COLORS.white}} // For iOS
+                    onValueChange={(itemValue, itemIndex) => {
+                      if (itemValue) {
+                        const selectedCrop = crops.find(
+                          c => c.uniqueId === itemValue || c.id === itemValue,
+                        );
+                        setFormData(prev => ({
+                          ...prev,
+                          cropId: itemValue,
+                          cropName: selectedCrop
+                            ? selectedCrop.crop_name || selectedCrop.crop
+                            : '',
+                        }));
+                      }
+                    }}
+                    // Add these attributes for Android
+                    backgroundTint={COLORS.primary} // Android tint color
+                    theme={{
+                      colors: {primary: COLORS.primary, text: COLORS.white},
+                    }}>
+                    <Picker.Item
+                      label="Select a crop"
+                      value=""
+                      color={
+                        Platform.OS === 'ios'
+                          ? COLORS.white
+                          : 'rgba(255,255,255,0.7)'
+                      }
+                      style={{backgroundColor: COLORS.surface}} // Force dark background on items
+                    />
+                    {crops.map(crop => (
+                      <Picker.Item
+                        key={crop.uniqueId || crop.id}
+                        label={crop.crop_name || crop.crop || 'Unnamed Crop'}
+                        value={crop.uniqueId || crop.id}
+                        color={COLORS.white}
+                        style={{backgroundColor: COLORS.surface}} // Force dark background on items
+                      />
+                    ))}
+                  </Picker>
+                  <MaterialCommunityIcons
+                    name="chevron-down"
+                    size={24}
+                    color={COLORS.accent}
+                    style={styles.pickerIcon}
                   />
-                ))}
-              </Picker>
+                </View>
+              </View>
             </View>
           ) : (
             <View style={styles.noCropsContainer}>
@@ -357,14 +419,28 @@ const AddTaskScreen = ({navigation, route}) => {
 
       {/* Save Button */}
       <TouchableOpacity
-        style={styles.saveButton}
+        style={styles.saveButtonContainer}
         onPress={handleSubmit}
         disabled={loading}>
-        {loading ? (
-          <ActivityIndicator color={COLORS.white} />
-        ) : (
-          <Text style={styles.saveButtonText}>Save Task</Text>
-        )}
+        <LinearGradient
+          colors={[COLORS.primary, COLORS.primaryDark]}
+          start={{x: 0, y: 0}}
+          end={{x: 1, y: 0}}
+          style={styles.saveButton}>
+          {loading ? (
+            <ActivityIndicator color={COLORS.white} />
+          ) : (
+            <>
+              <MaterialCommunityIcons
+                name="content-save"
+                size={20}
+                color={COLORS.white}
+                style={{marginRight: 8}}
+              />
+              <Text style={styles.saveButtonText}>Save Task</Text>
+            </>
+          )}
+        </LinearGradient>
       </TouchableOpacity>
     </View>
   );
@@ -410,7 +486,12 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontSize: FONT_SIZES.body,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(255,255,255,0.15)',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 1},
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
   },
   textarea: {
     minHeight: 100,
@@ -424,22 +505,55 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(255,255,255,0.15)',
   },
   dateText: {
     color: COLORS.white,
     fontSize: FONT_SIZES.body,
   },
   pickerContainer: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: 'transparent',
     borderRadius: BORDERS.radiusMedium,
     overflow: 'hidden',
+  },
+  pickerOuterContainer: {
+    // backgroundColor: 'rgba(25, 27, 38, 0.98)', // Very dark background
+    backgroundColor: COLORS.surface, // Darker background
+    borderRadius: BORDERS.radiusMedium,
+    padding: 1, // Thin padding to ensure no light edges
+    overflow: 'hidden',
+  },
+  pickerWrapper: {
+    // backgroundColor: 'rgba(30, 32, 44, 0.95)', // Darker background
+    backgroundColor: COLORS.surface, // Darker background
+    padding: SPACING.s,
+    borderRadius: BORDERS.radiusMedium,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(255,255,255,0.15)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    position: 'relative',
+    overflow: 'hidden', // Ensure content doesn't overflow
   },
   picker: {
     color: COLORS.white,
     height: 50,
+    width: '100%',
+    backgroundColor: 'transparent', // Keep transparent to show parent background
+    ...Platform.select({
+      android: {
+        color: COLORS.white,
+        backgroundColor: 'transparent',
+      },
+      ios: {
+        color: COLORS.white,
+      },
+    }),
+  },
+  pickerIcon: {
+    position: 'absolute',
+    right: 12,
+    pointerEvents: 'none',
   },
   taskTypesContainer: {
     flexDirection: 'row',
@@ -482,16 +596,24 @@ const styles = StyleSheet.create({
     margin: 4,
     borderRadius: BORDERS.radiusMedium,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(255,255,255,0.15)',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 1,
   },
   priorityButtonLow: {
-    backgroundColor: '#2ecc71',
+    backgroundColor: 'rgba(46, 204, 113, 0.8)',
+    borderColor: '#2ecc71',
   },
   priorityButtonMedium: {
-    backgroundColor: '#f39c12',
+    backgroundColor: 'rgba(243, 156, 18, 0.8)',
+    borderColor: '#f39c12',
   },
   priorityButtonHigh: {
-    backgroundColor: '#e74c3c',
+    backgroundColor: 'rgba(231, 76, 60, 0.8)',
+    borderColor: '#e74c3c',
   },
   priorityText: {
     color: COLORS.textLight,
@@ -521,13 +643,21 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontWeight: FONT_WEIGHTS.medium,
   },
-  saveButton: {
-    backgroundColor: COLORS.primary,
-    padding: SPACING.m,
+  saveButtonContainer: {
     margin: SPACING.m,
     borderRadius: BORDERS.radiusMedium,
+    overflow: 'hidden',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  saveButton: {
+    padding: SPACING.m,
     alignItems: 'center',
     justifyContent: 'center',
+    flexDirection: 'row',
   },
   saveButtonText: {
     color: COLORS.white,

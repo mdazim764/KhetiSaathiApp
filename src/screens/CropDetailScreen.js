@@ -9,9 +9,16 @@ import {
   Platform,
   UIManager,
   ScrollView,
+  SafeAreaView,
+  StatusBar,
+  Dimensions,
 } from 'react-native';
 import dayjs from 'dayjs';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import LinearGradient from 'react-native-linear-gradient';
+import Feather from 'react-native-vector-icons/Feather';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import Animated, {FadeInDown} from 'react-native-reanimated';
 
 // Enable LayoutAnimation on Android
 if (
@@ -52,6 +59,11 @@ const COLOR_PALETTE = [
 // Import theme
 import theme from '../constants/theme';
 const {COLORS, FONT_SIZES, FONT_WEIGHTS, SPACING, BORDERS, SIZES} = theme;
+
+// Define tablet detection
+const isTablet =
+  Platform.isPad ||
+  (Platform.OS === 'android' && Dimensions.get('window').width >= 600);
 
 const CropDetailScreen = ({route, navigation}) => {
   const {crop} = route.params;
@@ -244,7 +256,7 @@ const CropDetailScreen = ({route, navigation}) => {
   // --- End Event Handlers ---
 
   // --- Render Functions ---
-  const renderScheduleItem = ({item}) => {
+  const renderScheduleItem = ({item, index}) => {
     const start = dayjs(item.start).format('DD-MM-YYYY');
     const end =
       item.end && item.end !== 'NA'
@@ -252,46 +264,48 @@ const CropDetailScreen = ({route, navigation}) => {
         : start;
 
     return (
-      <TouchableOpacity
-        style={styles.scheduleCard}
-        onPress={() => toggleExpand(item.task)}>
-        <View style={styles.taskHeader}>
-          <Text style={styles.task}>{item.task}</Text>
-          <MaterialIcons
-            name={
-              expandedTasks[item.task]
-                ? 'keyboard-arrow-up'
-                : 'keyboard-arrow-down'
-            }
-            size={24}
-            color={COLORS.textLight} // Using theme color
-          />
-        </View>
-        <Text style={styles.dates}>
-          {start} {start !== end ? `to ${end}` : ''}
-        </Text>
-        {expandedTasks[item.task] && (
-          <View style={styles.detailsContainer}>
-            {item.description &&
-              item.description !== 'No description available.' && (
+      <Animated.View entering={FadeInDown.delay(index * 70).duration(300)}>
+        <TouchableOpacity
+          style={styles.scheduleCard}
+          onPress={() => toggleExpand(item.task)}>
+          <View style={styles.taskHeader}>
+            <Text style={styles.task}>{item.task}</Text>
+            <MaterialIcons
+              name={
+                expandedTasks[item.task]
+                  ? 'keyboard-arrow-up'
+                  : 'keyboard-arrow-down'
+              }
+              size={24}
+              color={COLORS.textLight} // Using theme color
+            />
+          </View>
+          <Text style={styles.dates}>
+            {start} {start !== end ? `to ${end}` : ''}
+          </Text>
+          {expandedTasks[item.task] && (
+            <View style={styles.detailsContainer}>
+              {item.description &&
+                item.description !== 'No description available.' && (
+                  <>
+                    <Text style={styles.detailHeader}>Description:</Text>
+                    <Text style={styles.detailText}>• {item.description}</Text>
+                  </>
+                )}
+              {item.tip && item.tip !== 'No adjustment needed' && (
                 <>
-                  <Text style={styles.detailHeader}>Description:</Text>
-                  <Text style={styles.detailText}>• {item.description}</Text>
+                  <Text style={styles.detailHeader}>Tips:</Text>
+                  <Text style={styles.detailText}>• {item.tip}</Text>
                 </>
               )}
-            {item.tip && item.tip !== 'No adjustment needed' && (
-              <>
-                <Text style={styles.detailHeader}>Tips:</Text>
-                <Text style={styles.detailText}>• {item.tip}</Text>
-              </>
-            )}
-            {item.description === 'No description available.' &&
-              item.tip === 'No adjustment needed' && (
-                <Text style={styles.detailText}>No details available.</Text>
-              )}
-          </View>
-        )}
-      </TouchableOpacity>
+              {item.description === 'No description available.' &&
+                item.tip === 'No adjustment needed' && (
+                  <Text style={styles.detailText}>No details available.</Text>
+                )}
+            </View>
+          )}
+        </TouchableOpacity>
+      </Animated.View>
     );
   };
 
@@ -429,67 +443,111 @@ const CropDetailScreen = ({route, navigation}) => {
 
   // --- Main Render ---
   return (
-    <View style={styles.container}>
-      {/* Basic Crop Details */}
-      <View style={styles.basicDetails}>
-        <Text style={styles.cropTitle}>
-          <Text>
-            {' '}
-            <MaterialIcons name="grass" size={30} color={COLORS.accent} />{' '}
-          </Text>
-          {cropTitle}🌿
-        </Text>
-        <Text style={styles.cropLocation}>
-          <MaterialIcons name="location-on" size={20} color={COLORS.accent} />{' '}
-          {basicDetails.location}
-        </Text>
-      </View>
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={COLORS.primaryDark}
+      />
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      {/* Header with gradient */}
+      <LinearGradient
+        colors={[COLORS.primaryDark, COLORS.primary]}
+        start={{x: 0, y: 0}}
+        end={{x: 1, y: 0}}
+        style={styles.header}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}>
+          <Feather name="arrow-left" size={24} color={COLORS.white} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Crop Details</Text>
+        <View style={{width: 24}} />
+      </LinearGradient>
+
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.scrollContent}>
+        {/* Animated Basic Crop Details */}
+        {/* Enhanced Crop Info Card */}
+        <Animated.View
+          entering={FadeInDown.duration(400)}
+          style={styles.basicDetails}>
+          <Text style={styles.cropTitle}>{cropTitle}</Text>
+
+          <View style={styles.cropInfoContainer}>
+            {/* Location Info */}
+            <View style={styles.infoRow}>
+              <MaterialIcons
+                name="location-on"
+                size={20}
+                color={COLORS.accent}
+              />
+              <Text style={styles.infoText}>{basicDetails.location}</Text>
+            </View>
+
+            {/* Climate Condition */}
+            <View style={styles.infoRow}>
+              <MaterialIcons name="wb-sunny" size={20} color="#FF9800" />
+              <Text style={styles.infoText}>
+                {crop.climate_condition || 'Climate data not available'}
+              </Text>
+            </View>
+
+            {/* Soil Type */}
+            <View style={styles.infoRow}>
+              <MaterialCommunityIcons name="shovel" size={20} color="#8D6E63" />
+              <Text style={styles.infoText}>
+                {crop.soil_type || 'Soil type not available'}
+              </Text>
+            </View>
+
+            {/* Year */}
+            <View style={styles.infoRow}>
+              <MaterialIcons name="event" size={20} color={COLORS.primary} />
+              <Text style={styles.infoText}>
+                {crop.year || 'Year not specified'}
+              </Text>
+            </View>
+          </View>
+        </Animated.View>
+
         {/* --- View Mode Toggle Buttons --- */}
         <View style={styles.toggleContainer}>
           <TouchableOpacity
             style={[
               styles.toggleButton,
-              viewMode === 'list'
-                ? styles.toggleButtonActive
-                : styles.toggleButtonInactive,
+              viewMode === 'list' && styles.toggleButtonActive,
             ]}
             onPress={() => handleViewModeChange('list')}>
             <MaterialIcons
               name="view-list"
-              size={20}
+              size={isTablet ? 24 : 20}
               color={viewMode === 'list' ? COLORS.white : COLORS.primary}
             />
             <Text
               style={[
                 styles.toggleButtonText,
-                viewMode === 'list'
-                  ? styles.toggleButtonTextActive
-                  : styles.toggleButtonTextInactive,
+                viewMode === 'list' && styles.toggleButtonTextActive,
               ]}>
               Details
             </Text>
           </TouchableOpacity>
+
           <TouchableOpacity
             style={[
               styles.toggleButton,
-              viewMode === 'graph'
-                ? styles.toggleButtonActive
-                : styles.toggleButtonInactive,
+              viewMode === 'graph' && styles.toggleButtonActive,
             ]}
             onPress={() => handleViewModeChange('graph')}>
             <MaterialIcons
               name="timeline"
-              size={20}
+              size={isTablet ? 24 : 20}
               color={viewMode === 'graph' ? COLORS.white : COLORS.primary}
             />
             <Text
               style={[
                 styles.toggleButtonText,
-                viewMode === 'graph'
-                  ? styles.toggleButtonTextActive
-                  : styles.toggleButtonTextInactive,
+                viewMode === 'graph' && styles.toggleButtonTextActive,
               ]}>
               Timeline
             </Text>
@@ -543,45 +601,107 @@ const CropDetailScreen = ({route, navigation}) => {
       </ScrollView>
 
       {/* Fixed Navigation Button */}
-      <TouchableOpacity
-        style={styles.fixedButton}
-        onPress={() => navigation.navigate('Calendar')}>
-        <MaterialIcons name="calendar-month" size={24} color={COLORS.white} />
-        <Text style={styles.fixedButtonText}>View in Calendar</Text>
-      </TouchableOpacity>
-    </View>
+      <Animated.View
+        style={[
+          styles.fixedButton,
+          {
+            shadowColor: '#000',
+            shadowOffset: {width: 0, height: 4},
+            shadowOpacity: 0.3,
+            shadowRadius: 5,
+            elevation: 6,
+          },
+        ]}>
+        <TouchableOpacity
+          style={styles.fixedButtonInner}
+          onPress={() => navigation.navigate('Calendar')}>
+          <MaterialIcons
+            name="calendar-month"
+            size={isTablet ? 28 : 24}
+            color={COLORS.white}
+          />
+          <Text style={styles.fixedButtonText}>View in Calendar</Text>
+        </TouchableOpacity>
+      </Animated.View>
+    </SafeAreaView>
   );
 };
 
 // --- Styles ---
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: Platform.OS === 'ios' ? 10 : 20,
+    paddingBottom: 15,
+    paddingHorizontal: SPACING.m,
+  },
+  headerTitle: {
+    fontSize: isTablet ? 24 : 20,
+    fontWeight: FONT_WEIGHTS.bold,
+    color: COLORS.white,
+    textAlign: 'center',
+  },
+  backButton: {
+    padding: 8,
+  },
   container: {
     flex: 1,
-    backgroundColor: COLORS.background, // Using theme background
+    backgroundColor: COLORS.background,
   },
   scrollContent: {
-    paddingHorizontal: SPACING.m, // Using theme spacing
-    paddingVertical: SPACING.s, // Using theme spacing
-    paddingBottom: SPACING.xxl, // Adjusted padding for fixed button
+    paddingHorizontal: SPACING.m,
+    paddingVertical: SPACING.m,
+    paddingBottom: 80, // Space for fixed button
   },
   basicDetails: {
-    marginTop: SPACING.l, // Using theme spacing
-    marginBottom: SPACING.m, // Using theme spacing
-    alignItems: 'center',
-    paddingHorizontal: SPACING.m, // Using theme spacing
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDERS.radiusMedium,
+    padding: SPACING.m,
+    marginBottom: SPACING.m,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   cropTitle: {
-    fontSize: FONT_SIZES.h2, // Using theme font size
-    fontWeight: FONT_WEIGHTS.bold, // Using theme font weight
-    marginBottom: SPACING.s, // Using theme spacing
-    color: COLORS.text, // Using theme text color
+    fontSize: isTablet ? FONT_SIZES.h1 : FONT_SIZES.h2,
+    fontWeight: FONT_WEIGHTS.bold,
+    marginBottom: SPACING.m,
+    color: COLORS.primary,
     textAlign: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.1)',
+    paddingBottom: SPACING.s,
   },
   cropLocation: {
     fontSize: FONT_SIZES.body, // Using theme font size
     color: COLORS.textLight, // Using theme text light color
     textAlign: 'center',
     marginBottom: SPACING.m, // Using theme spacing
+  },
+  cropInfoContainer: {
+    width: '100%',
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: SPACING.s,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    padding: SPACING.s,
+    borderRadius: BORDERS.radiusSmall,
+  },
+  infoText: {
+    fontSize: FONT_SIZES.body,
+    color: COLORS.textLight,
+    marginLeft: SPACING.s,
+    flex: 1,
   },
 
   // --- Toggle Button Styles ---
@@ -655,10 +775,11 @@ const styles = StyleSheet.create({
   scrollableArea: {},
   monthsHeaderRow: {
     flexDirection: 'row',
-    height: 32,
+    height: 28, // Reduced from 32
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border, // Using theme border color
+    borderBottomColor: COLORS.border,
     alignItems: 'center',
+    marginBottom: 4, // Add a small margin to separate from timeline rows
   },
   monthColumn: {width: 60, alignItems: 'center', justifyContent: 'center'},
   monthLabel: {
@@ -668,16 +789,14 @@ const styles = StyleSheet.create({
   }, // Using theme font styles
   timelineRow: {
     flexDirection: 'row',
-    height: 28,
+    height: 26, // Reduced from 34
     alignItems: 'center',
-    marginTop: SPACING.xs, // Using theme spacing
+    marginTop: 2, // Reduced from SPACING.s
+    marginBottom: 2, // Reduced from SPACING.xs
   },
   monthBlock: {
     width: '95%',
-    height: '100%',
-    borderWidth: 0.5,
-    borderColor: COLORS.border, // Using theme border color
-    borderRadius: BORDERS.radiusSmall, // Using theme border radius
+    height: '85%', // Increased from 80% for better fill
   },
   inactiveMonth: {
     backgroundColor: COLORS.background,
@@ -814,7 +933,29 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border, // Using theme border color
   },
-  // --- End Styles for Expandable List ---
+
+  // --- Header Styles ---
+  // header: {
+  //   paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+  //   alignItems: 'center',
+  //   justifyContent: 'space-between',
+  //   borderBottomWidth: 1,
+  //   borderBottomColor: COLORS.border, // Using theme border color
+  // },
+  headerTitle: {
+    fontSize: FONT_SIZES.h2, // Using theme font size
+    fontWeight: FONT_WEIGHTS.bold, // Using theme font weight
+    color: COLORS.white, // Using theme white color
+    flex: 1,
+    textAlign: 'center',
+  },
+  backButton: {
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  // --- End Header Styles ---
 
   // --- Overall Note Styles ---
   overallNoteContainer: {
@@ -842,26 +983,19 @@ const styles = StyleSheet.create({
   // --- Fixed Button Styles ---
   fixedButton: {
     position: 'absolute',
-    bottom: SPACING.l, // Using theme spacing
+    bottom: SPACING.l,
     left: '10%',
     right: '10%',
-    backgroundColor: COLORS.primary, // Using theme primary color
-    paddingVertical: SPACING.m, // Using theme spacing
-    borderRadius: BORDERS.radiusMedium, // Using theme border radius
+    borderRadius: BORDERS.radiusMedium,
+  },
+  fixedButtonInner: {
+    backgroundColor: COLORS.primary,
+    paddingVertical: SPACING.m,
+    borderRadius: BORDERS.radiusMedium,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    ...Platform.select({
-      ios: {
-        shadowColor: COLORS.black,
-        shadowOffset: {width: 0, height: 2},
-        shadowOpacity: 0.2,
-        shadowRadius: 3,
-      },
-      android: {
-        elevation: 4,
-      },
-    }),
+    width: '100%',
   },
   fixedButtonText: {
     color: COLORS.white, // Using theme white color

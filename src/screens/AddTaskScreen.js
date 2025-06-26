@@ -20,7 +20,7 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import moment from 'moment';
 import {v4 as uuidv4} from 'uuid';
 import theme from '../constants/theme';
-
+import {Calendar} from 'react-native-calendars';
 const {COLORS, FONT_SIZES, FONT_WEIGHTS, SPACING, BORDERS} = theme;
 
 const AddTaskScreen = ({navigation, route}) => {
@@ -245,33 +245,55 @@ const AddTaskScreen = ({navigation, route}) => {
           </TouchableOpacity>
 
           {showDatePicker && (
-            <DateTimePicker
-              value={formData.date}
-              mode="date"
-              is24Hour={true}
-              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-              onChange={handleDateChange}
-              minimumDate={new Date()}
-              // Theme styling for iOS
-              textColor={COLORS.white}
-              accentColor={COLORS.primary}
-              // Theme styling for Android
-              themeVariant="dark"
-              style={{
-                backgroundColor:
-                  Platform.OS === 'android' ? COLORS.surface : undefined,
-              }}
-              // For Android custom theming
-              androidMode="calendar"
-              // More Android-specific theme options
-              theme={{
-                backgroundColor: COLORS.surface,
-                headerBackgroundColor: COLORS.primary,
-                headerTextColor: COLORS.white,
-                textColor: COLORS.white,
-                calendarBackground: COLORS.surface,
-              }}
-            />
+            <View style={styles.customDatePickerContainer}>
+              <View style={styles.customDatePickerHeader}>
+                <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                  <MaterialCommunityIcons
+                    name="close"
+                    size={22}
+                    color={COLORS.white}
+                  />
+                </TouchableOpacity>
+                <Text style={styles.customDatePickerTitle}>Select Date</Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    setShowDatePicker(false);
+                  }}>
+                  <Text style={styles.customDatePickerDone}>Done</Text>
+                </TouchableOpacity>
+              </View>
+
+              <Calendar
+                current={moment(formData.date).format('YYYY-MM-DD')}
+                minDate={moment().format('YYYY-MM-DD')}
+                onDayPress={day => {
+                  const selectedDate = new Date(day.timestamp);
+                  setFormData(prev => ({...prev, date: selectedDate}));
+                  setShowDatePicker(false);
+                }}
+                theme={{
+                  backgroundColor: COLORS.surface,
+                  calendarBackground: COLORS.surface,
+                  textSectionTitleColor: COLORS.white,
+                  selectedDayBackgroundColor: COLORS.primary,
+                  selectedDayTextColor: COLORS.white,
+                  todayTextColor: COLORS.accent,
+                  dayTextColor: COLORS.white,
+                  textDisabledColor: 'rgba(255, 255, 255, 0.3)',
+                  dotColor: COLORS.accent,
+                  selectedDotColor: COLORS.white,
+                  arrowColor: COLORS.accent,
+                  monthTextColor: COLORS.white,
+                  indicatorColor: COLORS.primary,
+                  textDayFontWeight: '300',
+                  textMonthFontWeight: 'bold',
+                  textDayHeaderFontWeight: '500',
+                  textDayFontSize: 14,
+                  textMonthFontSize: 16,
+                  textDayHeaderFontSize: 13,
+                }}
+              />
+            </View>
           )}
         </View>
 
@@ -663,6 +685,48 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontSize: FONT_SIZES.body,
     fontWeight: FONT_WEIGHTS.bold,
+  },
+  androidDatePickerWrapper: {
+    backgroundColor: 'rgba(20, 25, 35, 0.95)',
+    borderRadius: BORDERS.radiusMedium,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    marginTop: SPACING.s,
+    paddingVertical: SPACING.s,
+  },
+  customDatePickerContainer: {
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDERS.radiusMedium,
+    overflow: 'hidden',
+    marginTop: SPACING.s,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 5,
+  },
+  customDatePickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: COLORS.primary,
+    paddingVertical: SPACING.s,
+    paddingHorizontal: SPACING.m,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  customDatePickerTitle: {
+    color: COLORS.white,
+    fontSize: FONT_SIZES.body,
+    fontWeight: FONT_WEIGHTS.bold,
+  },
+  customDatePickerDone: {
+    color: COLORS.white,
+    fontSize: FONT_SIZES.body,
+    fontWeight: FONT_WEIGHTS.medium,
   },
 });
 

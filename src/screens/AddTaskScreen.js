@@ -105,6 +105,7 @@ const AddTaskScreen = ({navigation, route}) => {
         id:
           formData.id ||
           `task-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+        uniqueId: `task-${Date.now()}-${Math.floor(Math.random() * 1000)}`, // Add a uniqueId for better tracking
       };
 
       // Get existing tasks
@@ -119,8 +120,15 @@ const AddTaskScreen = ({navigation, route}) => {
       // Save back to storage
       await AsyncStorage.setItem('tasks', JSON.stringify(updatedTasks));
 
+      // Show success message
       Alert.alert('Success', 'Task added successfully', [
-        {text: 'OK', onPress: () => navigation.goBack()},
+        {
+          text: 'OK',
+          onPress: () => {
+            // Simply navigate back - the useFocusEffect in CalendarScreen will handle refreshing
+            navigation.goBack();
+          },
+        },
       ]);
     } catch (error) {
       console.error('Error saving task:', error);

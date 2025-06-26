@@ -1,4 +1,5 @@
 import React, {useState, useEffect, useCallback} from 'react';
+import {useFocusEffect} from '@react-navigation/native';
 import {
   View,
   Text,
@@ -59,10 +60,25 @@ const CalendarScreen = ({navigation}) => {
     loadSelectedDateEvents();
   }, [selectedDate, events]);
 
+  // Add this before the loadCalendarData function
+  useFocusEffect(
+    useCallback(() => {
+      // This will run every time the screen comes into focus
+      console.log('Calendar screen focused, refreshing data...');
+      loadCalendarData();
+
+      // Return a cleanup function (optional)
+      return () => {
+        console.log('Calendar screen blurred');
+      };
+    }, []),
+  );
+
   // Load all calendar data
   const loadCalendarData = async () => {
     setLoadingEvents(true);
     try {
+      console.log('Fetching events from storage at:', new Date().toISOString());
       await fetchEventsFromStorage();
     } catch (error) {
       console.error('Error loading calendar data:', error);

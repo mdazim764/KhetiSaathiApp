@@ -17,6 +17,8 @@ import moment from 'moment';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import theme from '../constants/theme';
 import {Swipeable} from 'react-native-gesture-handler';
+import LinearGradient from 'react-native-linear-gradient';
+import Animated, {FadeInDown} from 'react-native-reanimated';
 
 const {COLORS, FONT_SIZES, FONT_WEIGHTS, SPACING, BORDERS} = theme;
 
@@ -154,77 +156,88 @@ const NotificationScreen = () => {
         onSwipeableOpen={() => setSelectedSwipeableNotification(item)}
         onSwipeableClose={() => setSelectedSwipeableNotification(null)}
         enabled={!isScheduledInFuture}>
-        <TouchableOpacity
+        <Animated.View
+          entering={FadeInDown.delay(100).duration(400)}
           style={[
             styles.notificationItem,
             item.read ? styles.notificationRead : styles.notificationUnread,
-            isScheduledInFuture && styles.notificationScheduledFuture, // Apply different styling for future scheduled notifications
-          ]}
-          onPress={() => {
-            if (!isScheduledInFuture) {
-              openNotificationModal(item);
-            }
-          }}
-          disabled={isScheduledInFuture}>
-          <View style={styles.notificationContent}>
+            isScheduledInFuture && styles.notificationScheduledFuture,
+          ]}>
+          <TouchableOpacity
+            style={styles.notificationContent}
+            onPress={() => {
+              if (!isScheduledInFuture) {
+                openNotificationModal(item);
+              }
+            }}
+            disabled={isScheduledInFuture}>
+            
+            {/* Status indicator */}
+            <View style={styles.notificationStatusRow}>
+              {!item.read && !hasScheduledTimePassed && item.scheduleTime ? (
+                <View style={styles.statusBadge}>
+                  <MaterialCommunityIcons
+                    name="timer"
+                    size={14}
+                    color={COLORS.white}
+                  />
+                  <Text style={styles.statusText}>Scheduled</Text>
+                </View>
+              ) : !item.read ? (
+                <View style={[styles.statusBadge, styles.newBadge]}>
+                  <MaterialCommunityIcons
+                    name="bell-ring"
+                    size={14}
+                    color={COLORS.white}
+                  />
+                  <Text style={styles.statusText}>New</Text>
+                </View>
+              ) : (
+                <View style={[styles.statusBadge, styles.readBadge]}>
+                  <MaterialCommunityIcons
+                    name="check"
+                    size={14}
+                    color={COLORS.white}
+                  />
+                  <Text style={styles.statusText}>Read</Text>
+                </View>
+              )}
+              
+              <Text style={styles.notificationTime}>
+                {item.scheduleTime 
+                  ? `⏰ ${moment(item.scheduleTime).fromNow()}`
+                  : `📅 ${moment(item.timestamp).fromNow()}`}
+              </Text>
+            </View>
+            
+            {/* Notification content */}
             <Text style={styles.notificationTitle}>{item.title}</Text>
             <Text style={styles.notificationBody}>{item.message}</Text>
-            {item.scheduleTime && (
-              <Text style={styles.notificationTime}>
-                ⏰: {moment(item.scheduleTime).fromNow()}
-              </Text>
-            )}
-            {!item.scheduleTime && (
-              <Text style={styles.notificationTime}>
-                Received:👉 {moment(item.timestamp).fromNow()}
-              </Text>
-            )}
+            
+            {/* Additional indicators */}
             {hasScheduledTimePassed && !item.read && (
-              <Text style={{color: 'orange'}}>Scheduled time passed</Text>
+              <View style={styles.warningContainer}>
+                <MaterialCommunityIcons
+                  name="alert-circle-outline"
+                  size={16}
+                  color="#f39c12"
+                />
+                <Text style={styles.warningText}>Scheduled time passed</Text>
+              </View>
             )}
-            {item.read && <Text style={{color: COLORS.success}}>Read</Text>}
-          </View>
-          {!item.read && !hasScheduledTimePassed && item.scheduleTime && (
-            <MaterialCommunityIcons
-              name="timer-outline"
-              size={20}
-              color={COLORS.primary}
-              style={styles.unreadIndicator}
-            />
-          )}
-          {!item.read && !item.scheduleTime && (
-            <MaterialCommunityIcons
-              name="bell-ring-outline"
-              size={20}
-              color={COLORS.primary}
-              style={styles.unreadIndicator}
-            />
-          )}
-          {!item.read && hasScheduledTimePassed && (
-            <MaterialCommunityIcons
-              name="bell-ring-outline"
-              size={20}
-              color={COLORS.primary}
-              style={styles.unreadIndicator}
-            />
-          )}
-          {item.read && (
-            <MaterialCommunityIcons
-              name="check-circle-outline"
-              size={20}
-              color={COLORS.success}
-              style={styles.unreadIndicator}
-            />
-          )}
-          {isScheduledInFuture && (
-            <MaterialCommunityIcons
-              name="lock-outline"
-              size={20}
-              color={COLORS.textLight}
-              style={styles.futureIndicator}
-            />
-          )}
-        </TouchableOpacity>
+            
+            {isScheduledInFuture && (
+              <View style={styles.lockedContainer}>
+                <MaterialCommunityIcons
+                  name="lock-clock"
+                  size={16}
+                  color={COLORS.textLight}
+                />
+                <Text style={styles.lockedText}>Will be available {moment(item.scheduleTime).fromNow()}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </Animated.View>
       </Swipeable>
     );
   };
@@ -261,26 +274,46 @@ const NotificationScreen = () => {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
-      <View style={styles.headerContainer}>
-        <MaterialCommunityIcons
-          name="bell-outline"
-          size={24}
-          color={COLORS.primary}
-        />
-        <Text style={styles.header}>Notifications</Text>
-        {notifications.length > 0 && (
-          <TouchableOpacity
-            onPress={clearAllNotifications}
-            style={styles.clearAllButton}>
+      {/* Improved header with gradient background */}
+      <LinearGradient
+        colors={[COLORS.primaryDark, COLORS.primary]}
+        start={{x: 0, y: 0}}
+        end={{x: 1, y: 0}}
+        style={styles.gradientHeader}>
+        <View style={styles.headerContent}>
+          <View style={styles.headerTitleSection}>
             <MaterialCommunityIcons
-              name="delete-sweep-outline"
-              size={24}
-              color={COLORS.error}
+              name="bell-ring"
+              size={28}
+              color={COLORS.white}
             />
-            <Text style={styles.clearAllText}>Clear All</Text>
-          </TouchableOpacity>
+            <Text style={styles.headerTitle}>Notifications</Text>
+          </View>
+
+          {notifications.length > 0 && (
+            <TouchableOpacity
+              onPress={clearAllNotifications}
+              style={styles.clearAllButton}>
+              <MaterialCommunityIcons
+                name="delete-sweep"
+                size={22}
+                color={COLORS.white}
+              />
+              <Text style={styles.clearAllText}>Clear All</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Notification counter badge */}
+        {notifications.length > 0 && (
+          <View style={styles.notificationCountContainer}>
+            <Text style={styles.notificationCount}>
+              {notifications.length}{' '}
+              {notifications.length === 1 ? 'notification' : 'notifications'}
+            </Text>
+          </View>
         )}
-      </View>
+      </LinearGradient>
       <FlatList
         data={notifications}
         renderItem={renderItem}
@@ -307,42 +340,77 @@ const NotificationScreen = () => {
       />
 
       <Modal
-        animationType="slide"
+        animationType="fade"
         transparent={true}
         visible={modalVisible}
         onRequestClose={closeModal}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
+        <TouchableOpacity 
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={closeModal}>
+          <Animated.View 
+            entering={FadeInDown.duration(300)}
+            style={styles.modalContainer}
+            onStartShouldSetResponder={() => true}
+            onTouchEnd={e => e.stopPropagation()}>
             {selectedNotification && (
               <>
-                <Text style={styles.modalTitle}>
-                  {selectedNotification.title}
-                </Text>
-                <Text style={styles.modalMessage}>
-                  {selectedNotification.message}
-                </Text>
-                <Text style={styles.modalTime}>
-                  {moment(selectedNotification.timestamp).format('LLL')}
-                </Text>
-                <View style={styles.modalButtons}>
-                  <Button
-                    title="OK"
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>
+                    {selectedNotification.title}
+                  </Text>
+                  <TouchableOpacity onPress={closeModal} style={styles.closeButton}>
+                    <MaterialCommunityIcons
+                      name="close"
+                      size={24}
+                      color={COLORS.textLight}
+                    />
+                  </TouchableOpacity>
+                </View>
+                
+                <View style={styles.modalBody}>
+                  <Text style={styles.modalMessage}>
+                    {selectedNotification.message}
+                  </Text>
+                  
+                  <View style={styles.modalTimeContainer}>
+                    <MaterialCommunityIcons
+                      name="clock-outline"
+                      size={18}
+                      color={COLORS.textLight}
+                    />
+                    <Text style={styles.modalTime}>
+                      {moment(selectedNotification.timestamp).format('LLLL')}
+                    </Text>
+                  </View>
+                </View>
+                
+                <View style={styles.modalFooter}>
+                  <TouchableOpacity
+                    style={styles.modalDismissButton}
                     onPress={() => {
                       deleteNotification(selectedNotification);
                       closeModal();
-                    }}
-                    color={COLORS.primary}
-                  />
-                  <Button
-                    title="Cancel"
-                    onPress={closeModal}
-                    color={COLORS.textLight}
-                  />
+                    }}>
+                    <LinearGradient
+                      colors={[COLORS.primary, COLORS.primaryDark]}
+                      start={{x: 0, y: 0}}
+                      end={{x: 1, y: 0}}
+                      style={styles.dismissButtonGradient}>
+                      <Text style={styles.dismissButtonText}>Dismiss</Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity
+                    style={styles.modalCancelButton}
+                    onPress={closeModal}>
+                    <Text style={styles.cancelButtonText}>Cancel</Text>
+                  </TouchableOpacity>
                 </View>
               </>
             )}
-          </View>
-        </View>
+          </Animated.View>
+        </TouchableOpacity>
       </Modal>
     </View>
   );
@@ -352,147 +420,309 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
-    paddingHorizontal: SPACING.s,
   },
-  headerContainer: {
+  // Gradient header styles
+  gradientHeader: {
+    paddingTop: Platform.OS === 'ios' ? 50 : 30,
+    paddingBottom: SPACING.l,
+    paddingHorizontal: SPACING.m,
+    borderBottomLeftRadius: BORDERS.radiusLarge,
+    borderBottomRightRadius: BORDERS.radiusLarge,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 5,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  headerTitleSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: SPACING.m,
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDERS.radiusMedium,
-    margin: SPACING.m,
-    elevation: 1,
-    justifyContent: 'space-between',
   },
-  header: {
-    fontSize: FONT_SIZES.h4,
+  headerTitle: {
+    fontSize: FONT_SIZES.h3,
     fontWeight: FONT_WEIGHTS.bold,
-    color: COLORS.text,
+    color: COLORS.white,
     marginLeft: SPACING.s,
+    letterSpacing: 0.5,
   },
+  notificationCountContainer: {
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    paddingVertical: SPACING.xs,
+    paddingHorizontal: SPACING.m,
+    borderRadius: 20,
+    alignSelf: 'flex-start',
+    marginTop: SPACING.m,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  notificationCount: {
+    color: COLORS.white,
+    fontSize: FONT_SIZES.caption,
+    fontWeight: FONT_WEIGHTS.medium,
+  },
+  clearAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingVertical: SPACING.xs,
+    paddingHorizontal: SPACING.m,
+    borderRadius: BORDERS.radiusMedium,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  clearAllText: {
+    color: COLORS.white,
+    marginLeft: SPACING.xs,
+    fontSize: FONT_SIZES.caption,
+    fontWeight: FONT_WEIGHTS.medium,
+  },
+  
+  // Enhanced notification item styles
   notificationItem: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: 'rgba(40, 42, 54, 0.9)',  // Dark background
     borderRadius: BORDERS.radiusMedium,
     padding: SPACING.m,
     marginHorizontal: SPACING.m,
     marginVertical: SPACING.xs,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    elevation: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    borderColor: 'rgba(80, 85, 95, 0.6)',  // Darker border
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 3},
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
   },
   notificationContent: {
     flex: 1,
   },
+  notificationStatusRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: SPACING.s,
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.primary,
+    paddingVertical: 3,
+    paddingHorizontal: SPACING.s,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',  // Subtle border for depth
+  },
+  newBadge: {
+    backgroundColor: COLORS.accent,
+  },
+  readBadge: {
+    backgroundColor: COLORS.success,
+  },
+  statusText: {
+    color: COLORS.white,
+    fontSize: FONT_SIZES.small,
+    marginLeft: 3,
+    fontWeight: FONT_WEIGHTS.medium,
+  },
   notificationTitle: {
     fontSize: FONT_SIZES.body,
     fontWeight: FONT_WEIGHTS.bold,
-    color: COLORS.text,
+    color: COLORS.white,  // Changed to white for dark background
     marginBottom: SPACING.xs,
   },
   notificationBody: {
     fontSize: FONT_SIZES.caption,
-    color: COLORS.textLight,
+    color: 'rgba(255, 255, 255, 0.8)',  // Light gray for dark background
+    lineHeight: FONT_SIZES.caption * 1.5,
   },
   notificationTime: {
     fontSize: FONT_SIZES.small,
-    color: COLORS.textLight,
-    marginTop: SPACING.xs,
+    color: 'rgba(255, 255, 255, 0.6)',  // Subtle light color
+  },
+  warningContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: SPACING.s,
+    backgroundColor: 'rgba(243, 156, 18, 0.2)',  // More visible on dark
+    padding: SPACING.xs,
+    borderRadius: BORDERS.radiusSmall,
+    borderWidth: 1,
+    borderColor: 'rgba(243, 156, 18, 0.3)',
+  },
+  warningText: {
+    fontSize: FONT_SIZES.small,
+    color: '#f5b942',  // Brighter warning color for dark background
+    marginLeft: SPACING.xs,
+  },
+  lockedContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: SPACING.s,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',  // Subtle light background
+    padding: SPACING.xs,
+    borderRadius: BORDERS.radiusSmall,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+  },
+  lockedText: {
+    fontSize: FONT_SIZES.small,
+    color: 'rgba(255, 255, 255, 0.7)',  // More visible on dark
+    marginLeft: SPACING.xs,
   },
   notificationRead: {
-    backgroundColor: COLORS.surface,
-    opacity: 0.8,
+    backgroundColor: 'rgba(35, 38, 50, 0.9)',  // Slightly darker
+    opacity: 0.9,
+    borderLeftWidth: 3,
+    borderLeftColor: COLORS.success,
   },
   notificationUnread: {
-    backgroundColor: COLORS.white,
-  },
-  unreadIndicator: {
-    marginLeft: SPACING.s,
-  },
-  futureIndicator: {
-    marginLeft: SPACING.s,
+    backgroundColor: 'rgba(45, 48, 65, 0.95)',  // Slightly brighter
+    borderLeftWidth: 3,
+    borderLeftColor: COLORS.accent,
   },
   notificationScheduledFuture: {
-    opacity: 0.6, // Slightly fade out future scheduled notifications
+    opacity: 0.8,
+    borderLeftWidth: 3,
+    borderLeftColor: 'rgba(180, 180, 180, 0.6)',  // Light gray border
+    backgroundColor: 'rgba(30, 35, 45, 0.95)',  // Even darker
   },
+  
+  // Delete action styles
+  deleteAction: {
+    backgroundColor: COLORS.error,
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 80,
+    borderTopRightRadius: BORDERS.radiusMedium,
+    borderBottomRightRadius: BORDERS.radiusMedium,
+    marginVertical: SPACING.xs,
+  },
+  deleteText: {
+    color: COLORS.white,
+    fontWeight: FONT_WEIGHTS.medium,
+    fontSize: FONT_SIZES.small,
+    marginTop: SPACING.xs,
+  },
+  
+  // Enhanced modal styles
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',  // Darker overlay
+  },
+  modalContainer: {
+    backgroundColor: 'rgba(30, 32, 44, 0.95)',  // Dark container
+    borderRadius: BORDERS.radiusMedium,
+    width: '85%',
+    maxWidth: 400,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(80, 90, 120, 0.3)',  // Subtle border
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: SPACING.m,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'rgba(60, 70, 100, 0.5)',  // Darker but still distinct
+  },
+  modalTitle: {
+    fontSize: FONT_SIZES.h5,
+    fontWeight: FONT_WEIGHTS.bold,
+    color: COLORS.white,  // White text for contrast
+    flex: 1,
+  },
+  closeButton: {
+    padding: SPACING.xs,
+  },
+  modalBody: {
+    padding: SPACING.l,
+  },
+  modalMessage: {
+    fontSize: FONT_SIZES.body,
+    color: 'rgba(255, 255, 255, 0.9)',  // Light text
+    marginBottom: SPACING.m,
+    lineHeight: FONT_SIZES.body * 1.5,
+  },
+  modalTimeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingTop: SPACING.s,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  modalTime: {
+    fontSize: FONT_SIZES.caption,
+    color: 'rgba(255, 255, 255, 0.6)',  // Subtle light text
+    marginLeft: SPACING.xs,
+  },
+  modalFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    padding: SPACING.m,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'rgba(20, 25, 35, 0.6)',  // Even darker
+  },
+  modalDismissButton: {
+    flex: 1,
+    marginRight: SPACING.s,
+    borderRadius: BORDERS.radiusMedium,
+    overflow: 'hidden',
+  },
+  dismissButtonGradient: {
+    paddingVertical: SPACING.m,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dismissButtonText: {
+    color: COLORS.white,
+    fontWeight: FONT_WEIGHTS.bold,
+  },
+  modalCancelButton: {
+    flex: 1,
+    paddingVertical: SPACING.m,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: BORDERS.radiusMedium,
+    backgroundColor: COLORS.surface,
+  },
+  cancelButtonText: {
+    color: COLORS.textLight,
+    fontWeight: FONT_WEIGHTS.medium,
+  },
+  
+  // Empty state styles
   emptyState: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: SPACING.xxl,
+    marginTop: SPACING.xl,
   },
   emptyText: {
     fontSize: FONT_SIZES.body,
-    color: COLORS.textLight,
+    color: 'rgba(255, 255, 255, 0.7)',  // Lighter text for dark theme
     marginTop: SPACING.m,
     textAlign: 'center',
   },
   listContent: {
     paddingBottom: SPACING.l,
-  },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  modalContainer: {
-    backgroundColor: COLORS.white,
-    borderRadius: BORDERS.radiusMedium,
-    padding: SPACING.l,
-    width: '80%',
-    alignItems: 'center',
-    elevation: 5,
-  },
-  modalTitle: {
-    fontSize: FONT_SIZES.h5,
-    fontWeight: FONT_WEIGHTS.bold,
-    color: COLORS.text,
-    marginBottom: SPACING.s,
-  },
-  modalMessage: {
-    fontSize: FONT_SIZES.body,
-    color: COLORS.textLight,
-    marginBottom: SPACING.m,
-    textAlign: 'center',
-  },
-  modalTime: {
-    fontSize: FONT_SIZES.caption,
-    color: COLORS.textLight,
-    marginBottom: SPACING.m,
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    width: '100%',
-  },
-  deleteAction: {
-    backgroundColor: COLORS.error,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingRight: SPACING.m,
-    borderRadius: BORDERS.radiusMedium,
-    marginVertical: SPACING.xs,
-    paddingVertical: SPACING.m,
-    paddingLeft: SPACING.m,
-  },
-  deleteText: {
-    color: COLORS.white,
-    fontWeight: FONT_WEIGHTS.medium,
-    fontSize: FONT_SIZES.body,
-    marginTop: SPACING.xs,
-  },
-  clearAllButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginRight: SPACING.s,
-  },
-  clearAllText: {
-    color: COLORS.error,
-    marginLeft: SPACING.xs,
-    fontSize: FONT_SIZES.caption,
+    paddingTop: SPACING.s,
   },
 });
 

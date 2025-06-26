@@ -13,7 +13,13 @@ import {
   Platform,
   StatusBar,
   Button,
+  Dimensions,
+  isTablet,
 } from 'react-native';
+import {SafeAreaView} from 'react-native-safe-area-context';
+import LinearGradient from 'react-native-linear-gradient';
+import Feather from 'react-native-vector-icons/Feather';
+import Animated, {FadeInDown} from 'react-native-reanimated';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import moment from 'moment';
 import PushNotification, {Importance} from 'react-native-push-notification';
@@ -33,8 +39,6 @@ const WEATHER_API_BASE = env.WEATHER_API_BASE;
 const SERVER_URL = env.SERVER_URL;
 const NOMINATIM_API_BASE = env.NOMINATIM_API_BASE;
 const DAILY_NOTIFICATION_TIMES = ['09:00', '13:00', '17:00'];
-
-const tipColors = ['#e0f7fa', '#fce4ec', '#e8f5e9', '#fff3e0'];
 
 // Add debug logging in development mode
 if (env.isDevelopment && env.isDevelopment()) {
@@ -567,94 +571,116 @@ const UpcomingTasksScreen = ({navigation}) => {
     if ([1135, 1147].includes(conditionCode)) return '🌫️';
     return '🌡️';
   };
-  const renderTaskItem = ({item}) => (
-    <View style={styles.taskCard}>
-      <View style={styles.taskHeader}>
-        <MaterialIcons name="agriculture" size={20} color={COLORS.primary} />
-        <Text style={styles.taskName}>{item.task}</Text>
-      </View>
-      <View style={styles.taskDetailRow}>
-        <MaterialCommunityIcons
-          name="calendar"
-          size={16}
-          color={COLORS.textLight}
-        />
-        <Text style={styles.taskDetailText}>
-          {moment(item.date, 'YYYY-MM-DD').format('DD-MM-YYYY')}
-        </Text>
-      </View>
-      <View style={styles.taskDetailRow}>
-        <MaterialCommunityIcons
-          name="map-marker"
-          size={16}
-          color={COLORS.textLight}
-        />
-        <Text style={styles.taskDetailText}>
-          {item.district}, {item.state}
-        </Text>
-      </View>
-      <View style={styles.taskDetailRow}>
-        <MaterialCommunityIcons
-          name="seed"
-          size={16}
-          color={COLORS.textLight}
-        />
-        <Text style={styles.taskDetailText}>{item.cropName}</Text>
-      </View>
-      {item.description !== 'No description available' && (
+  const renderTaskItem = ({item, index}) => (
+    <Animated.View entering={FadeInDown.delay(index * 70).duration(300)}>
+      <View style={styles.taskCard}>
+        <View style={styles.taskHeader}>
+          <MaterialIcons name="agriculture" size={20} color={COLORS.primary} />
+          <Text style={styles.taskName}>{item.task}</Text>
+        </View>
         <View style={styles.taskDetailRow}>
           <MaterialCommunityIcons
-            name="note-text"
+            name="calendar"
             size={16}
             color={COLORS.textLight}
           />
-          <Text style={styles.descriptionText}>{item.description}</Text>
+          <Text style={styles.taskDetailText}>
+            {moment(item.date, 'YYYY-MM-DD').format('DD-MM-YYYY')}
+          </Text>
         </View>
-      )}
-      {item.tip !== 'No adjustment needed' && (
         <View style={styles.taskDetailRow}>
           <MaterialCommunityIcons
-            name="lightbulb-on-outline"
+            name="map-marker"
             size={16}
             color={COLORS.textLight}
           />
-          <Text style={styles.tipText}>{item.tip}</Text>
+          <Text style={styles.taskDetailText}>
+            {item.district}, {item.state}
+          </Text>
         </View>
-      )}
-      <View style={styles.notificationRow}>
-        <MaterialCommunityIcons
-          name="bell-outline"
-          size={14}
-          color={COLORS.accent}
-        />
-        <Text style={styles.notificationText}>
-          Reminder: {item.notificationTime}
-        </Text>
+        <View style={styles.taskDetailRow}>
+          <MaterialCommunityIcons
+            name="seed"
+            size={16}
+            color={COLORS.textLight}
+          />
+          <Text style={styles.taskDetailText}>{item.cropName}</Text>
+        </View>
+        {item.description !== 'No description available' && (
+          <View style={styles.taskDetailRow}>
+            <MaterialCommunityIcons
+              name="note-text"
+              size={16}
+              color={COLORS.textLight}
+            />
+            <Text style={styles.descriptionText}>{item.description}</Text>
+          </View>
+        )}
+        {item.tip !== 'No adjustment needed' && (
+          <View style={styles.taskDetailRow}>
+            <MaterialCommunityIcons
+              name="lightbulb-on-outline"
+              size={16}
+              color={COLORS.textLight}
+            />
+            <Text style={styles.tipText}>{item.tip}</Text>
+          </View>
+        )}
+        <View style={styles.notificationRow}>
+          <MaterialCommunityIcons
+            name="bell-outline"
+            size={14}
+            color={COLORS.accent}
+          />
+          <Text style={styles.notificationText}>
+            Reminder: {item.notificationTime}
+          </Text>
+        </View>
       </View>
-    </View>
+    </Animated.View>
   );
 
   const renderTipItem = ({item, index}) => (
-    <View
-      style={[
-        styles.tipCard,
-        {backgroundColor: tipColors[index % tipColors.length]},
-      ]}>
-      <Text style={styles.tipTask}>{item.task}</Text>
-      <Text style={styles.tipText}>{item.tip}</Text>
-    </View>
+    <Animated.View entering={FadeInDown.delay(index * 100).duration(400)}>
+      <LinearGradient
+        colors={[
+          index % 2 === 0
+            ? 'rgba(76, 175, 80, 0.2)'
+            : 'rgba(33, 150, 243, 0.2)',
+          index % 2 === 0
+            ? 'rgba(76, 175, 80, 0.05)'
+            : 'rgba(33, 150, 243, 0.05)',
+        ]}
+        start={{x: 0, y: 0}}
+        end={{x: 1, y: 1}}
+        style={styles.tipCard}>
+        <View style={styles.tipIconContainer}>
+          <MaterialCommunityIcons
+            name={index % 2 === 0 ? 'leaf' : 'weather-partly-cloudy'}
+            size={24}
+            color={index % 2 === 0 ? COLORS.success : COLORS.accent}
+          />
+        </View>
+        <Text style={styles.tipTask} numberOfLines={1} ellipsizeMode="tail">
+          {item.task}
+        </Text>
+        <Text style={styles.tipText} numberOfLines={5} ellipsizeMode="tail">
+          {item.tip}
+        </Text>
+      </LinearGradient>
+    </Animated.View>
   );
 
   const ListHeader = () => (
     <View>
-      <View style={styles.headerContainer}>
+      {/* <View style={styles.headerContainer}>
         <MaterialCommunityIcons
           name="calendar-month"
           size={24}
           color={COLORS.primary}
         />
         <Text style={styles.header}>Upcoming Tasks (Next 30 Days)</Text>
-      </View>
+      </View> */}
       <View style={styles.weatherCard}>
         {state.weatherLoading ? (
           <ActivityIndicator size="small" color={COLORS.primary} />
@@ -670,16 +696,20 @@ const UpcomingTasksScreen = ({navigation}) => {
                 {state.weather.location.name}, {state.weather.location.region}
               </Text>
             </View>
+
             <View style={styles.weatherGrid}>
               <View style={styles.weatherItem}>
-                <Text style={styles.weatherValue}>
-                  {getWeatherEmoji(state.weather.current.condition.code)}
-                </Text>
+                <View style={styles.weatherIconContainer}>
+                  <Text style={styles.weatherEmoji}>
+                    {getWeatherEmoji(state.weather.current.condition.code)}
+                  </Text>
+                </View>
                 <Text style={styles.weatherValue}>
                   {state.weather.current.condition.text}
                 </Text>
                 <Text style={styles.weatherLabel}>Condition</Text>
               </View>
+
               <View style={styles.weatherItem}>
                 <MaterialCommunityIcons
                   name="thermometer"
@@ -703,6 +733,7 @@ const UpcomingTasksScreen = ({navigation}) => {
                 <Text style={styles.weatherLabel}>Humidity</Text>
               </View>
             </View>
+
             <Text style={styles.weatherHeader}>
               <MaterialCommunityIcons
                 name="alert-circle-outline"
@@ -734,10 +765,17 @@ const UpcomingTasksScreen = ({navigation}) => {
           <View style={styles.weatherUnavailable}>
             <MaterialCommunityIcons
               name="weather-off-outline"
-              size={24}
+              size={50}
               color={COLORS.textLight}
             />
-            <Text style={styles.weatherText}>Weather data unavailable</Text>
+            <Text style={styles.weatherUnavailableText}>
+              Weather data unavailable
+            </Text>
+            <TouchableOpacity
+              style={styles.retryButton}
+              onPress={initWeatherAndTasks}>
+              <Text style={styles.retryText}>Retry</Text>
+            </TouchableOpacity>
           </View>
         )}
       </View>
@@ -749,25 +787,31 @@ const UpcomingTasksScreen = ({navigation}) => {
           <ActivityIndicator color={COLORS.white} />
         ) : (
           <>
-            <MaterialCommunityIcons
-              name="lightbulb-on-outline"
-              size={20}
-              color={COLORS.white}
-            />
-            <Text style={styles.buttonText}>Get Expert Recommendations</Text>
+            <LinearGradient
+              colors={[COLORS.accent, COLORS.accentDark]}
+              start={{x: 0, y: 0}}
+              end={{x: 1, y: 0}}
+              style={styles.tipsButtonGradient}>
+              <MaterialCommunityIcons
+                name="lightbulb-on-outline"
+                size={20}
+                color={COLORS.white}
+              />
+              <Text style={styles.buttonText}>Get Expert Recommendations</Text>
+            </LinearGradient>
           </>
         )}
       </TouchableOpacity>
       {state.tips?.tips?.length > 0 && (
         <View style={styles.tipsContainer}>
-          <Text style={styles.tipsHeader}>
+          <View style={styles.tipsHeaderContainer}>
             <MaterialCommunityIcons
-              name="lightbulb-outline"
-              size={20}
-              color={COLORS.primary}
+              name="lightbulb-on"
+              size={24}
+              color={COLORS.accent}
             />
-            Weather Recommendations
-          </Text>
+            <Text style={styles.tipsHeaderText}>Expert Recommendations</Text>
+          </View>
           <FlatList
             horizontal
             data={state.tips.tips}
@@ -826,36 +870,44 @@ const UpcomingTasksScreen = ({navigation}) => {
       try {
         const {
           scheduleTaskNotificationsInBackground,
-          scheduleDailyNotificationTask
+          scheduleDailyNotificationTask,
         } = require('../services/backgroundTaskService');
-        
+
         // First run an immediate scheduling of tasks
         const count = await scheduleTaskNotificationsInBackground();
-        
+
         // Then schedule the daily task
         const scheduled = await scheduleDailyNotificationTask();
-        
+
         // Get the next scheduled time
-        const nextTimeStr = await AsyncStorage.getItem('nextDailySchedulerTime');
-        const nextTime = nextTimeStr ? moment(nextTimeStr).format('YYYY-MM-DD HH:mm') : 'Unknown';
-        
+        const nextTimeStr = await AsyncStorage.getItem(
+          'nextDailySchedulerTime',
+        );
+        const nextTime = nextTimeStr
+          ? moment(nextTimeStr).format('YYYY-MM-DD HH:mm')
+          : 'Unknown';
+
         // Show success message
         Alert.alert(
           'Daily Scheduling Test',
-          `Scheduled ${count} notifications for the next 5 days.\n\nDaily task scheduled for: ${nextTime}`
+          `Scheduled ${count} notifications for the next 5 days.\n\nDaily task scheduled for: ${nextTime}`,
         );
-        
+
         // Check scheduled notifications
         setTimeout(() => {
           PushNotification.getScheduledLocalNotifications(notifications => {
-            console.log('Currently scheduled notifications:', notifications.length);
+            console.log(
+              'Currently scheduled notifications:',
+              notifications.length,
+            );
             notifications.forEach((n, i) => {
-              if (i < 5) { // Show first 5 only to avoid log spam
-                console.log(`Notification ${i+1}:`, {
+              if (i < 5) {
+                // Show first 5 only to avoid log spam
+                console.log(`Notification ${i + 1}:`, {
                   id: n.id,
                   title: n.title,
                   message: n.message.substring(0, 30) + '...',
-                  date: moment(n.date).format('YYYY-MM-DD HH:mm')
+                  date: moment(n.date).format('YYYY-MM-DD HH:mm'),
                 });
               }
             });
@@ -863,37 +915,73 @@ const UpcomingTasksScreen = ({navigation}) => {
         }, 1000);
       } catch (error) {
         console.error('Error testing daily scheduling:', error);
-        Alert.alert('Error', 'Failed to test daily scheduling: ' + error.message);
+        Alert.alert(
+          'Error',
+          'Failed to test daily scheduling: ' + error.message,
+        );
       }
     }
   };
 
   // Add a test button to your UI (for development only)
-  {env.isDevelopment && env.isDevelopment() && (
-    <TouchableOpacity
-      style={styles.testButton}
-      onPress={testNotifications}>
-      <Text style={styles.testButtonText}>Test Notifications</Text>
-    </TouchableOpacity>
-  )}
+  {
+    env.isDevelopment && env.isDevelopment() && (
+      <TouchableOpacity style={styles.testButton} onPress={testNotifications}>
+        <Text style={styles.testButtonText}>Test Notifications</Text>
+      </TouchableOpacity>
+    );
+  }
 
   // Add a test button for daily scheduling
-  {env.isDevelopment && env.isDevelopment() && (
-    <TouchableOpacity 
-      style={[styles.tipsButton, { marginTop: 10, backgroundColor: '#00C853' }]}
-      onPress={testDailyScheduling}>
-      <MaterialCommunityIcons
-        name="calendar-clock"
-        size={20}
-        color={COLORS.white}
-      />
-      <Text style={styles.buttonText}>Test 5-Day Scheduling</Text>
-    </TouchableOpacity>
-  )}
+  {
+    env.isDevelopment && env.isDevelopment() && (
+      <TouchableOpacity
+        style={[styles.tipsButton, {marginTop: 10, backgroundColor: '#00C853'}]}
+        onPress={testDailyScheduling}>
+        <MaterialCommunityIcons
+          name="calendar-clock"
+          size={20}
+          color={COLORS.white}
+        />
+        <Text style={styles.buttonText}>Test 5-Day Scheduling</Text>
+      </TouchableOpacity>
+    );
+  }
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={COLORS.primaryDark}
+      />
+
+      <LinearGradient
+        colors={[COLORS.primaryDark, COLORS.primary]}
+        start={{x: 0, y: 0}}
+        end={{x: 1, y: 0}}
+        style={styles.header}>
+        <View style={styles.headerLeftSection}>
+          <MaterialCommunityIcons
+            name="calendar-check"
+            size={22}
+            color={COLORS.white}
+          />
+          <View style={styles.headerTitleContainer}>
+            <Text style={styles.headerTitle}>Upcoming Tasks</Text>
+            <Text style={styles.headerSubtitle}>
+              {moment().format('dddd, MMMM D')}
+            </Text>
+          </View>
+        </View>
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={styles.headerButton}
+            onPress={initWeatherAndTasks}>
+            <Feather name="refresh-cw" size={20} color={COLORS.white} />
+          </TouchableOpacity>
+        </View>
+      </LinearGradient>
+
       <FlatList
         data={state.upcomingTasks}
         keyExtractor={item => item.uniqueId}
@@ -923,6 +1011,7 @@ const UpcomingTasksScreen = ({navigation}) => {
         }
         contentContainerStyle={styles.listContent}
       />
+      {/*
       <Button
         title="Test Notification"
         onPress={() => {
@@ -965,7 +1054,8 @@ const UpcomingTasksScreen = ({navigation}) => {
             });
         }}
       />
-    </View>
+      */}
+    </SafeAreaView>
   );
 };
 
@@ -975,6 +1065,49 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
     paddingHorizontal: SPACING.s,
   },
+  safeArea: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: Platform.OS === 'ios' ? 10 : 20,
+    paddingBottom: 15,
+    paddingHorizontal: SPACING.m,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 4,
+  },
+  headerLeftSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerTitleContainer: {
+    marginLeft: SPACING.s,
+  },
+  headerTitle: {
+    fontSize: isTablet ? 24 : 20,
+    fontWeight: FONT_WEIGHTS.bold,
+    color: COLORS.white,
+  },
+  headerSubtitle: {
+    fontSize: isTablet ? FONT_SIZES.small : FONT_SIZES.caption,
+    color: 'rgba(255, 255, 255, 0.85)',
+    marginTop: 2,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+  },
   headerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -983,12 +1116,6 @@ const styles = StyleSheet.create({
     borderRadius: BORDERS.radiusMedium,
     margin: SPACING.m,
     elevation: 1,
-  },
-  header: {
-    fontSize: FONT_SIZES.h4,
-    fontWeight: FONT_WEIGHTS.bold,
-    color: COLORS.text,
-    marginLeft: SPACING.s,
   },
   taskCard: {
     backgroundColor: COLORS.surface,
@@ -1049,7 +1176,11 @@ const styles = StyleSheet.create({
     borderRadius: BORDERS.radiusMedium,
     padding: SPACING.m,
     margin: SPACING.m,
-    elevation: 1,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   weatherHeaderRow: {
     flexDirection: 'row',
@@ -1081,6 +1212,18 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.caption,
     color: COLORS.textLight,
   },
+  weatherIconContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: SPACING.xs,
+  },
+  weatherEmoji: {
+    fontSize: 30,
+  },
   impactItem: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -1093,15 +1236,21 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   tipsButton: {
-    backgroundColor: COLORS.primary,
     borderRadius: BORDERS.radiusMedium,
-    padding: SPACING.m,
     marginHorizontal: SPACING.m,
     marginVertical: SPACING.s,
+    overflow: 'hidden',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+  },
+  tipsButtonGradient: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 2,
+    padding: SPACING.m,
   },
   buttonText: {
     color: COLORS.white,
@@ -1111,28 +1260,67 @@ const styles = StyleSheet.create({
   },
   tipsContainer: {
     marginVertical: SPACING.m,
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDERS.radiusMedium,
+    padding: SPACING.s,
+    marginHorizontal: SPACING.m,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
-  tipsHeader: {
-    fontSize: FONT_SIZES.body,
-    fontWeight: FONT_WEIGHTS.bold,
-    color: COLORS.text,
-    marginLeft: SPACING.m,
-    marginBottom: SPACING.s,
+  tipsHeaderContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: SPACING.m,
+    paddingHorizontal: SPACING.s,
+    paddingVertical: SPACING.s,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.1)',
+  },
+  tipsHeaderText: {
+    fontSize: FONT_SIZES.h4,
+    fontWeight: FONT_WEIGHTS.bold,
+    color: COLORS.accent,
+    marginLeft: SPACING.s,
+  },
+  tipsList: {
+    paddingHorizontal: SPACING.xs,
+    paddingBottom: SPACING.s,
   },
   tipCard: {
     padding: SPACING.m,
-    marginRight: SPACING.s,
+    marginRight: SPACING.m,
     borderRadius: BORDERS.radiusMedium,
     width: 280,
-    backgroundColor: COLORS.surface,
-    elevation: 1,
+    height: 200, // Fixed height for all cards
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 3,
+    justifyContent: 'flex-start', // Ensure content starts from top
+  },
+  tipIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: SPACING.s,
   },
   tipTask: {
     fontSize: FONT_SIZES.body,
     fontWeight: FONT_WEIGHTS.bold,
-    marginBottom: SPACING.xs,
+    color: COLORS.white,
+    marginBottom: SPACING.s,
+  },
+  tipText: {
+    fontSize: FONT_SIZES.small,
+    color: COLORS.textLight,
+    lineHeight: 20,
+    flex: 1, // Allow text to take remaining space
   },
   emptyState: {
     flex: 1,
@@ -1161,6 +1349,76 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontSize: FONT_SIZES.body,
     fontWeight: FONT_WEIGHTS.bold,
+  },
+  weatherUnavailable: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: SPACING.l,
+  },
+  weatherUnavailableText: {
+    fontSize: FONT_SIZES.body,
+    color: COLORS.textLight,
+    marginTop: SPACING.m,
+    textAlign: 'center',
+  },
+  retryButton: {
+    marginTop: SPACING.m,
+    paddingVertical: SPACING.s,
+    paddingHorizontal: SPACING.m,
+    backgroundColor: COLORS.primary,
+    borderRadius: BORDERS.radiusSmall,
+  },
+  retryText: {
+    color: COLORS.white,
+    fontSize: FONT_SIZES.small,
+    fontWeight: FONT_WEIGHTS.medium,
+  },
+  devContainer: {
+    margin: SPACING.m,
+    padding: SPACING.m,
+    backgroundColor: '#333',
+    borderRadius: BORDERS.radiusMedium,
+    borderWidth: 1,
+    borderColor: '#555',
+  },
+  devHeader: {
+    fontSize: FONT_SIZES.body,
+    fontWeight: FONT_WEIGHTS.bold,
+    color: '#fff',
+    marginBottom: SPACING.s,
+  },
+  devButtonsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  devButton: {
+    backgroundColor: '#555',
+    padding: SPACING.s,
+    borderRadius: BORDERS.radiusSmall,
+    flex: 1,
+    marginHorizontal: 5,
+    alignItems: 'center',
+  },
+  devButtonText: {
+    color: '#fff',
+    fontSize: FONT_SIZES.small,
+  },
+  // Add this style to fix the missing weather header style
+  weatherHeader: {
+    fontSize: FONT_SIZES.body,
+    fontWeight: FONT_WEIGHTS.bold,
+    color: COLORS.primary,
+    marginTop: SPACING.m,
+    marginBottom: SPACING.s,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  weatherText: {
+    fontSize: FONT_SIZES.small,
+    color: COLORS.textLight,
+    marginLeft: SPACING.s,
+    marginTop: SPACING.xs,
+    fontStyle: 'italic',
   },
 });
 

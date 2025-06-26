@@ -18,6 +18,7 @@ import dayjs from 'dayjs';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import moment from 'moment';
 import Animated, {FadeInDown} from 'react-native-reanimated';
+import LinearGradient from 'react-native-linear-gradient';
 
 import env from '../config/env';
 import {getStoredLocation} from '../utils/locationUtils';
@@ -62,7 +63,8 @@ const TaskItem = ({item, index, numColumns}) => {
     const parts = [];
     if (item.city && item.city !== 'Unknown City') parts.push(item.city);
     if (item.state && item.state !== 'Unknown State') parts.push(item.state);
-    if (item.country && item.country !== 'Unknown Country') parts.push(item.country);
+    if (item.country && item.country !== 'Unknown Country')
+      parts.push(item.country);
 
     return parts.length > 0 ? parts.join(', ') : 'Location not specified';
   };
@@ -463,30 +465,50 @@ const CropTasksByDateScreen = ({route, navigation}) => {
     if (!item || !item.tip) {
       return null;
     }
-    const backgroundColor = tipColors[index % tipColors.length];
-    return (
-      <Animated.View
-        style={[
-          themedStyles.tipCard,
-          {backgroundColor},
-          isTablet && themedStyles.tipCardTablet,
-        ]}
-        entering={FadeInDown.delay(index * 50).duration(300)}>
-        <Text
-          style={[
-            themedStyles.tipTask,
-            isTablet && themedStyles.tipTaskTablet,
-          ]}>
-           <Text>{item.task || 'Tip'}:</Text>
-        </Text>
 
-        <Text
+    return (
+      <Animated.View entering={FadeInDown.delay(index * 100).duration(400)}>
+        <LinearGradient
+          colors={[
+            index % 2 === 0
+              ? 'rgba(76, 175, 80, 0.2)'
+              : 'rgba(33, 150, 243, 0.2)',
+            index % 2 === 0
+              ? 'rgba(76, 175, 80, 0.05)'
+              : 'rgba(33, 150,243, 0.05)',
+          ]}
+          start={{x: 0, y: 0}}
+          end={{x: 1, y: 1}}
           style={[
-            themedStyles.tipText,
-            isTablet && themedStyles.tipTextTablet,
+            themedStyles.tipCard,
+            isTablet && themedStyles.tipCardTablet,
           ]}>
-          <Text>{item.tip}</Text>
-        </Text>
+          <View style={themedStyles.tipIconContainer}>
+            <MaterialCommunityIcons
+              name={index % 2 === 0 ? 'leaf' : 'weather-partly-cloudy'}
+              size={24}
+              color={index % 2 === 0 ? COLORS.success : COLORS.accent}
+            />
+          </View>
+          <Text
+            style={[
+              themedStyles.tipTask,
+              isTablet && themedStyles.tipTaskTablet,
+            ]}
+            numberOfLines={1}
+            ellipsizeMode="tail">
+            {item.task || 'Tip'}
+          </Text>
+          <Text
+            style={[
+              themedStyles.tipText,
+              isTablet && themedStyles.tipTextTablet,
+            ]}
+            numberOfLines={5}
+            ellipsizeMode="tail">
+            {item.tip}
+          </Text>
+        </LinearGradient>
       </Animated.View>
     );
   };
@@ -571,7 +593,11 @@ const CropTasksByDateScreen = ({route, navigation}) => {
           isTablet && themedStyles.buttonRowTablet,
         ]}>
         <TouchableOpacity
-          style={[themedStyles.button, isTablet && themedStyles.buttonTablet]}
+          style={[
+            themedStyles.button,
+            isTablet && themedStyles.buttonTablet,
+            {backgroundColor: COLORS.accent}, // Change to accent color
+          ]}
           onPress={() => handleGetTips()}
           disabled={tipsLoading || !weather || !weather.day}>
           {tipsLoading ? (
@@ -579,7 +605,7 @@ const CropTasksByDateScreen = ({route, navigation}) => {
           ) : (
             <>
               <MaterialCommunityIcons
-                name="lightbulb-outline"
+                name="lightbulb-on-outline"
                 size={isTablet ? FONT_SIZES.h4 : 20}
                 color={COLORS.white}
               />
@@ -588,7 +614,7 @@ const CropTasksByDateScreen = ({route, navigation}) => {
                   themedStyles.buttonText,
                   isTablet && themedStyles.buttonTextTablet,
                 ]}>
-                Get Weather Tips
+                Get Expert Recommendations
               </Text>
             </>
           )}
@@ -609,19 +635,20 @@ const CropTasksByDateScreen = ({route, navigation}) => {
             themedStyles.tipsContainer,
             isTablet && themedStyles.tipsContainerTablet,
           ]}>
-           
-          <Text
-            style={[
-              themedStyles.tipsHeader,
-              isTablet && themedStyles.tipsHeaderTablet,
-            ]}>
+          <View style={themedStyles.tipsHeaderContainer}>
             <MaterialCommunityIcons
-              name="lightbulb-multiple-outline"
-              size={isTablet ? FONT_SIZES.h4 : 20}
-              color={COLORS.primary}
+              name="lightbulb-on"
+              size={24}
+              color={COLORS.accent}
             />
-            <Text>Weather-based Tips:</Text>
-          </Text>
+            <Text
+              style={[
+                themedStyles.tipsHeader,
+                isTablet && themedStyles.tipsHeaderTablet,
+              ]}>
+              Weather-based Recommendations
+            </Text>
+          </View>
           <FlatList
             data={tips.tips}
             keyExtractor={(item, index) => index.toString()}
@@ -633,7 +660,7 @@ const CropTasksByDateScreen = ({route, navigation}) => {
         </View>
       ) : tips !== null && !tipsLoading ? (
         <Text style={themedStyles.emptyText}>
-          No weather-based tips available for this date/weather.      
+          No weather-based tips available for this date/weather.
         </Text>
       ) : null}
        
@@ -736,58 +763,230 @@ const CropTasksByDateScreen = ({route, navigation}) => {
     return null;
   };
 
+  // Add this function before the return statement
+  const getWeatherIcon = condition => {
+    condition = condition.toLowerCase();
+    if (condition.includes('sunny') || condition.includes('clear'))
+      return 'weather-sunny';
+    if (condition.includes('partly cloudy')) return 'weather-partly-cloudy';
+    if (condition.includes('cloudy')) return 'weather-cloudy';
+    if (condition.includes('rain') || condition.includes('drizzle'))
+      return 'weather-rainy';
+    if (condition.includes('thunder') || condition.includes('lightning'))
+      return 'weather-lightning';
+    if (condition.includes('snow') || condition.includes('blizzard'))
+      return 'weather-snowy';
+    if (condition.includes('fog') || condition.includes('mist'))
+      return 'weather-fog';
+    return 'weather-cloudy';
+  };
+
   return (
     <SafeAreaView style={themedStyles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} /> 
-      <View
-        style={[
-          themedStyles.container,
-          isTablet && themedStyles.containerTablet,
-        ]}>
-        <FlatList
-          data={tasks}
-          renderItem={({item, index}) => (
-            <TaskItem item={item} index={index} numColumns={numColumns} />
-          )}
-          keyExtractor={(item, index) =>
-            item.uniqueId ? item.uniqueId + item.task : index.toString()
-          }
-          contentContainerStyle={themedStyles.listContentContainer}
-          ListHeaderComponent={ListHeader}
-          ListEmptyComponent={renderEmptyComponent()}
-          showsVerticalScrollIndicator={false}
-          numColumns={numColumns}
-          key={numColumns}
-        />
-        <View
-          style={[themedStyles.footer, isTablet && themedStyles.footerTablet]}>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={COLORS.primaryDark}
+      />
+
+      {/* Improved integrated header with gradient */}
+      <LinearGradient
+        colors={[COLORS.primaryDark, COLORS.primary]}
+        start={{x: 0, y: 0}}
+        end={{x: 1, y: 0}}
+        style={themedStyles.headerContainer}>
+        {/* Top section with back button and title */}
+        <View style={themedStyles.headerTopRow}>
           <TouchableOpacity
-            style={[
-              themedStyles.backButton,
-              isTablet && themedStyles.backButtonTablet,
-            ]}
+            style={themedStyles.backButtonSmall}
             onPress={() => navigation.goBack()}>
-             
             <MaterialCommunityIcons
               name="arrow-left"
-              size={isTablet ? FONT_SIZES.h4 : 20}
+              size={24}
               color={COLORS.white}
             />
-                 
-            <Text
-              style={[
-                themedStyles.backButtonText,
-                isTablet && themedStyles.backButtonTextTablet,
-              ]}>
-              Back to Calendar
-            </Text>
-             
           </TouchableOpacity>
-               
+          <Text style={themedStyles.headerTitle}>Tasks</Text>
+          <View style={{width: 24}} />
         </View>
-           
-      </View>
-       
+
+        {/* Date and task count section in a single row */}
+        <View style={themedStyles.headerDateContainer}>
+          <View style={themedStyles.headerDateSection}>
+            <MaterialCommunityIcons
+              name="calendar-month"
+              size={22}
+              color={COLORS.white}
+              style={themedStyles.headerDateIcon}
+            />
+            <Text style={themedStyles.headerDateText}>
+              {dayjs(date).format('ddd, MMM D, YYYY')}
+            </Text>
+          </View>
+          <View style={themedStyles.taskCountBadge}>
+            <MaterialCommunityIcons
+              name="clipboard-text"
+              size={16}
+              color={COLORS.white}
+            />
+            <Text style={themedStyles.taskCountText}>
+              {tasks.length} {tasks.length === 1 ? 'task' : 'tasks'}
+            </Text>
+          </View>
+        </View>
+      </LinearGradient>
+
+      {/* Main scrollable content */}
+      <ScrollView
+        style={themedStyles.scrollContainer}
+        contentContainerStyle={[
+          themedStyles.scrollContent,
+          {paddingTop: SPACING.m}, // Add some top padding to create space after header
+        ]}
+        showsVerticalScrollIndicator={false}>
+        {/* Weather card */}
+        <View style={themedStyles.weatherCard}>
+          <View style={themedStyles.weatherCardHeader}>
+            <MaterialCommunityIcons
+              name="weather-partly-cloudy"
+              size={24}
+              color={COLORS.primary}
+            />
+            <Text style={themedStyles.weatherCardTitle}>
+              Weather Conditions
+            </Text>
+          </View>
+
+          {weatherLoading ? (
+            <ActivityIndicator
+              size="small"
+              color={COLORS.primary}
+              style={{marginVertical: SPACING.m}}
+            />
+          ) : weather ? (
+            <Animated.View entering={FadeInDown.duration(400)}>
+              <View style={themedStyles.weatherContent}>
+                <View style={themedStyles.weatherIconContainer}>
+                  <MaterialCommunityIcons
+                    name={getWeatherIcon(weather.day.condition.text)}
+                    size={40}
+                    color={COLORS.accent}
+                  />
+                </View>
+                <View style={themedStyles.weatherDetails}>
+                  <Text style={themedStyles.weatherCondition}>
+                    {weather.day.condition.text}
+                  </Text>
+                  <Text style={themedStyles.weatherTemp}>
+                    Avg: {weather.day.avgtemp_c}°C • Min:{' '}
+                    {weather.day.mintemp_c}°C • Max: {weather.day.maxtemp_c}°C
+                  </Text>
+                  <Text style={themedStyles.weatherExtra}>
+                    Humidity: {weather.day.avghumidity}% • Rain Chance:{' '}
+                    {weather.day.daily_chance_of_rain}%
+                  </Text>
+                </View>
+              </View>
+            </Animated.View>
+          ) : (
+            <View style={themedStyles.weatherUnavailable}>
+              <MaterialCommunityIcons
+                name="cloud-off-outline"
+                size={40}
+                color={COLORS.textLight}
+              />
+              <Text style={themedStyles.weatherUnavailableText}>
+                Weather data not available
+              </Text>
+            </View>
+          )}
+
+          {/* Weather tips button */}
+          <TouchableOpacity
+            style={themedStyles.tipsButton}
+            onPress={() => handleGetTips()}
+            disabled={tipsLoading || !weather || !weather.day}>
+            {tipsLoading ? (
+              <ActivityIndicator size="small" color={COLORS.white} />
+            ) : (
+              <LinearGradient
+                colors={[COLORS.accent, COLORS.accentDark]}
+                start={{x: 0, y: 0}}
+                end={{x: 1, y: 0}}
+                style={themedStyles.tipsButtonGradient}>
+                <MaterialCommunityIcons
+                  name="lightbulb-on-outline"
+                  size={20}
+                  color={COLORS.white}
+                />
+                <Text style={themedStyles.tipsButtonText}>
+                  Get Expert Recommendations
+                </Text>
+              </LinearGradient>
+            )}
+          </TouchableOpacity>
+        </View>
+
+        {/* Weather tips results */}
+        {tipsLoading ? (
+          <ActivityIndicator
+            size="small"
+            color={COLORS.primary}
+            style={themedStyles.tipsLoader}
+          />
+        ) : tips &&
+          tips.tips &&
+          Array.isArray(tips.tips) &&
+          tips.tips.length > 0 ? (
+          <View style={themedStyles.tipsContainer}>
+            <View style={themedStyles.tipsHeaderContainer}>
+              <MaterialCommunityIcons
+                name="lightbulb-on"
+                size={24}
+                color={COLORS.accent}
+              />
+              <Text style={themedStyles.tipsHeader}>
+                Expert Recommendations
+              </Text>
+            </View>
+            <FlatList
+              data={tips.tips}
+              keyExtractor={(item, index) => index.toString()}
+              renderItem={renderTipItem}
+              horizontal={true}
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={themedStyles.tipsListContent}
+              nestedScrollEnabled={true}
+            />
+          </View>
+        ) : null}
+
+        {/* Tasks list header */}
+        <View style={themedStyles.tasksSectionHeader}>
+          <MaterialCommunityIcons
+            name="clipboard-list"
+            size={24}
+            color={COLORS.primary}
+          />
+          <Text style={themedStyles.tasksSectionTitle}>Scheduled Tasks</Text>
+        </View>
+
+        {/* Tasks (render manually, not with FlatList) */}
+        {tasks.length > 0
+          ? tasks.map((item, index) => (
+              <TaskItem
+                key={
+                  item.uniqueId ? item.uniqueId + item.task : index.toString()
+                }
+                item={item}
+                index={index}
+                numColumns={numColumns}
+              />
+            ))
+          : renderEmptyComponent()}
+
+        {/* Bottom padding */}
+        <View style={{height: 40}} />
+      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -805,19 +1004,75 @@ const themedStyles = StyleSheet.create({
     paddingHorizontal: SPACING.l, // Increased padding for overall container on tablet
   },
   listContentContainer: {
-    paddingHorizontal: isTablet ? SPACING.m : SPACING.s,
     paddingBottom: SPACING.l,
     flexGrow: 1,
   },
   headerContainer: {
-    padding: SPACING.m,
-    backgroundColor: COLORS.surface,
-    marginBottom: SPACING.m, // Increased margin below header container
-    borderRadius: BORDERS.radiusMedium,
-    marginHorizontal: isTablet ? SPACING.m : SPACING.s, // Apply horizontal margin consistently
+    flexDirection: 'column',
+    paddingTop: Platform.OS === 'ios' ? 45 : 30,
+    paddingBottom: SPACING.l,
+    paddingHorizontal: SPACING.l,
+    borderBottomLeftRadius: BORDERS.radiusXLarge,
+    borderBottomRightRadius: BORDERS.radiusXLarge,
+    marginBottom: SPACING.l,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 6},
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 10,
   },
-  headerContainerTablet: {
-    padding: SPACING.l, // Increased padding inside header container on tablet
+  headerTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: SPACING.m,
+    paddingHorizontal: SPACING.xs,
+  },
+  headerTitle: {
+    fontSize: isTablet ? FONT_SIZES.h2 : FONT_SIZES.h3,
+    fontWeight: FONT_WEIGHTS.bold,
+    color: COLORS.white,
+    textAlign: 'center',
+    letterSpacing: 0.5,
+  },
+  headerDateContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: SPACING.m,
+    marginBottom: SPACING.s,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    paddingVertical: SPACING.s,
+    paddingHorizontal: SPACING.m,
+    borderRadius: BORDERS.radiusMedium,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  headerDateSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerDateIcon: {
+    marginRight: SPACING.xs,
+  },
+  headerDateText: {
+    fontSize: isTablet ? FONT_SIZES.h4 : FONT_SIZES.body,
+    fontWeight: FONT_WEIGHTS.bold,
+    color: COLORS.white,
+    letterSpacing: 0.5,
+    textShadowColor: 'rgba(0,0,0,0.2)',
+    textShadowOffset: {width: 1, height: 1},
+    textShadowRadius: 2,
+  },
+  taskCountBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    paddingVertical: SPACING.xs,
+    paddingHorizontal: SPACING.m,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.4)',
   },
   screenHeader: {
     fontSize: isTablet ? FONT_SIZES.h2 : FONT_SIZES.h3,
@@ -956,67 +1211,88 @@ const themedStyles = StyleSheet.create({
     paddingHorizontal: SPACING.m,
   },
   tipsContainer: {
-    marginVertical: SPACING.s,
-    paddingVertical: SPACING.s,
-    marginHorizontal: isTablet ? SPACING.m : SPACING.s, // Apply horizontal margin consistently
+    marginVertical: SPACING.m,
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDERS.radiusMedium,
+    padding: SPACING.s,
+    marginHorizontal: isTablet ? SPACING.m : SPACING.s,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   tipsContainerTablet: {
-    paddingHorizontal: SPACING.m,
+    padding: SPACING.m,
   },
   tipsHeader: {
     fontSize: isTablet ? FONT_SIZES.h5 : FONT_SIZES.body,
     fontWeight: FONT_WEIGHTS.bold,
-    marginBottom: SPACING.xs,
+    marginBottom: SPACING.m,
     textAlign: 'center',
-    color: COLORS.primaryDark,
+    color: COLORS.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tipsHeaderContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: SPACING.m,
+    paddingHorizontal: SPACING.s,
+    paddingVertical: SPACING.s,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.1)',
   },
   tipsHeaderTablet: {
-    fontSize: FONT_SIZES.h5,
+    fontSize: FONT_SIZES.h4,
   },
   tipCard: {
-    padding: SPACING.s,
-    borderRadius: BORDERS.radiusSmall,
-    minWidth: 200,
-    maxWidth: 300, // Allow tip cards to be a bit wider on larger screens
-    width: isTablet ? 300 : 270,
-    marginHorizontal: isTablet ? SPACING.s : SPACING.xs, // Added slight elevation for tip cards
-    elevation: 1,
-    ...Platform.select({
-      ios: {
-        shadowColor: COLORS.black,
-        shadowOffset: {width: 0, height: 1},
-        shadowOpacity: 0.08,
-        shadowRadius: 2,
-      },
-    }),
+    padding: SPACING.m,
+    marginRight: SPACING.m,
+    borderRadius: BORDERS.radiusMedium,
+    width: 280,
+    height: 200, // Fixed height for all cards
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 3,
+    justifyContent: 'flex-start',
   },
   tipCardTablet: {
-    // Styles applied when in tablet mode
-    width: 350, // Increased width for tablet
-    padding: SPACING.m, // Increased padding for tablet
-    marginHorizontal: SPACING.m, // Adjusted horizontal margin for tablet
-    borderRadius: BORDERS.radiusMedium, // Slightly larger radius for tablet
-    elevation: 2, // Increased elevation for tablet
-    shadowColor: COLORS.black,
+    width: 350,
+    height: 230,
+    padding: SPACING.m,
+    borderRadius: BORDERS.radiusMedium,
   },
-  tipsListContent: {
-    paddingHorizontal: isTablet ? SPACING.m : SPACING.s, // Adjusted horizontal padding for tip list
+  tipIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: SPACING.s,
   },
   tipTask: {
     fontSize: FONT_SIZES.body,
-    fontWeight: FONT_WEIGHTS.medium,
-    marginBottom: SPACING.xs,
-    color: COLORS.primaryDark,
+    fontWeight: FONT_WEIGHTS.bold,
+    color: COLORS.white,
+    marginBottom: SPACING.s,
   },
   tipTaskTablet: {
-    fontSize: FONT_SIZES.body * 1.1,
+    fontSize: FONT_SIZES.h5,
   },
   tipText: {
-    fontSize: FONT_SIZES.body,
-    color: COLORS.text,
+    fontSize: FONT_SIZES.small,
+    color: COLORS.textLight,
+    lineHeight: 20,
+    flex: 1,
   },
   tipTextTablet: {
     fontSize: FONT_SIZES.body,
+    lineHeight: 22,
   },
   tipsLoader: {
     marginVertical: SPACING.s,
@@ -1147,6 +1423,186 @@ const themedStyles = StyleSheet.create({
     color: COLORS.white,
     fontSize: isTablet ? FONT_SIZES.small : 10,
     fontWeight: FONT_WEIGHTS.bold,
+  },
+
+  headerContainer: {
+    flexDirection: 'column',
+    paddingTop: Platform.OS === 'ios' ? 45 : 20,
+    // paddingBottom: SPACING.l,
+    paddingHorizontal: SPACING.l,
+    borderBottomLeftRadius: BORDERS.radiusXLarge,
+    borderBottomRightRadius: BORDERS.radiusXLarge,
+    marginBottom: SPACING.l,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 6},
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+  headerTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    // alignItems: 'center',
+    // marginBottom: SPACING.m,
+    paddingHorizontal: SPACING.xs,
+  },
+  headerTitle: {
+    fontSize: isTablet ? FONT_SIZES.h2 : FONT_SIZES.h3,
+    fontWeight: FONT_WEIGHTS.bold,
+    color: COLORS.white,
+    textAlign: 'center',
+    letterSpacing: 0.5,
+    marginBottom: 0,
+  },
+  headerDateContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: SPACING.m,
+    marginBottom: SPACING.s,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    paddingVertical: SPACING.s,
+    paddingHorizontal: SPACING.m,
+    borderRadius: BORDERS.radiusMedium,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  headerDateSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerDateIcon: {
+    marginRight: SPACING.xs,
+  },
+  headerDateText: {
+    fontSize: isTablet ? FONT_SIZES.h4 : FONT_SIZES.body,
+    fontWeight: FONT_WEIGHTS.bold,
+    color: COLORS.white,
+    letterSpacing: 0.5,
+    textShadowColor: 'rgba(0,0,0,0.2)',
+    textShadowOffset: {width: 1, height: 1},
+    textShadowRadius: 2,
+  },
+  taskCountBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    paddingVertical: SPACING.xs,
+    paddingHorizontal: SPACING.m,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.4)',
+  },
+  scrollContainer: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  scrollContent: {
+    paddingBottom: SPACING.xxl,
+    paddingTop: SPACING.s,
+  },
+  weatherCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDERS.radiusLarge,
+    padding: SPACING.m,
+    marginHorizontal: SPACING.m,
+    marginTop: 0, // Remove top margin to flow better from header
+    marginBottom: SPACING.m,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    elevation: 5, // Increased elevation
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 3},
+    shadowOpacity: 0.15,
+    shadowRadius: 5,
+  },
+  weatherCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: SPACING.m,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.1)',
+    paddingBottom: SPACING.s,
+  },
+  weatherCardTitle: {
+    fontSize: isTablet ? FONT_SIZES.h4 : FONT_SIZES.h5,
+    fontWeight: FONT_WEIGHTS.bold,
+    color: COLORS.primary,
+    marginLeft: SPACING.s,
+  },
+  weatherContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  weatherIconContainer: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: SPACING.m,
+  },
+  weatherDetails: {
+    flex: 1,
+  },
+  weatherCondition: {
+    fontSize: isTablet ? FONT_SIZES.h4 : FONT_SIZES.body,
+    fontWeight: FONT_WEIGHTS.bold,
+    color: COLORS.text,
+    marginBottom: SPACING.xs,
+  },
+  weatherTemp: {
+    fontSize: FONT_SIZES.caption,
+    color: COLORS.textLight,
+    marginBottom: SPACING.xs,
+  },
+  weatherExtra: {
+    fontSize: FONT_SIZES.caption,
+    color: COLORS.textLight,
+  },
+  weatherUnavailable: {
+    alignItems: 'center',
+    padding: SPACING.m,
+  },
+  weatherUnavailableText: {
+    fontSize: FONT_SIZES.body,
+    color: COLORS.textLight,
+    marginTop: SPACING.s,
+    textAlign: 'center',
+  },
+  tipsButton: {
+    marginTop: SPACING.m,
+    borderRadius: BORDERS.radiusMedium,
+    overflow: 'hidden',
+  },
+  tipsButtonGradient: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: SPACING.m,
+  },
+  tipsButtonText: {
+    color: COLORS.white,
+    fontSize: FONT_SIZES.body,
+    fontWeight: FONT_WEIGHTS.bold,
+    marginLeft: SPACING.s,
+  },
+  tasksSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: SPACING.m,
+    marginTop: SPACING.m,
+    marginBottom: SPACING.s,
+    paddingBottom: SPACING.xs,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.1)',
+  },
+  tasksSectionTitle: {
+    fontSize: isTablet ? FONT_SIZES.h4 : FONT_SIZES.h5,
+    fontWeight: FONT_WEIGHTS.bold,
+    color: COLORS.primary,
+    marginLeft: SPACING.s,
   },
 });
 

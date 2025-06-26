@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   ScrollView,
   TextInput,
-  Alert,
   Platform,
   StatusBar,
   ActivityIndicator,
@@ -21,6 +20,7 @@ import moment from 'moment';
 import {v4 as uuidv4} from 'uuid';
 import theme from '../constants/theme';
 import {Calendar} from 'react-native-calendars';
+import CustomAlert from '../components/CustomAlert'; // Adjust path as needed
 const {COLORS, FONT_SIZES, FONT_WEIGHTS, SPACING, BORDERS} = theme;
 
 const AddTaskScreen = ({navigation, route}) => {
@@ -44,6 +44,12 @@ const AddTaskScreen = ({navigation, route}) => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [crops, setCrops] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [alert, setAlert] = useState({
+    visible: false,
+    title: '',
+    message: '',
+    onConfirm: null,
+  });
 
   useEffect(() => {
     loadCrops();
@@ -86,14 +92,18 @@ const AddTaskScreen = ({navigation, route}) => {
     setFormData(prev => ({...prev, taskType: type}));
   };
 
+  const showAlert = (title, message, onConfirm) => {
+    setAlert({visible: true, title, message, onConfirm});
+  };
+
   const handleSubmit = async () => {
     if (!formData.task.trim()) {
-      Alert.alert('Error', 'Please enter a task name');
+      showAlert('Error', 'Please enter a task name');
       return;
     }
 
     if (!formData.cropId && !formData.cropName) {
-      Alert.alert('Error', 'Please select a crop for this task');
+      showAlert('Error', 'Please select a crop for this task');
       return;
     }
 
@@ -121,18 +131,12 @@ const AddTaskScreen = ({navigation, route}) => {
       await AsyncStorage.setItem('tasks', JSON.stringify(updatedTasks));
 
       // Show success message
-      Alert.alert('Success', 'Task added successfully', [
-        {
-          text: 'OK',
-          onPress: () => {
-            // Simply navigate back - the useFocusEffect in CalendarScreen will handle refreshing
-            navigation.goBack();
-          },
-        },
-      ]);
+      showAlert('Success', 'Task added successfully', () => {
+        navigation.goBack();
+      });
     } catch (error) {
       console.error('Error saving task:', error);
-      Alert.alert('Error', 'Failed to save your task. Please try again.');
+      showAlert('Error', 'Failed to save your task. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -464,6 +468,17 @@ const AddTaskScreen = ({navigation, route}) => {
           )}
         </LinearGradient>
       </TouchableOpacity>
+
+      <CustomAlert
+        visible={alert.visible}
+        title={alert.title}
+        message={alert.message}
+        onClose={() => setAlert({...alert, visible: false})}
+        onConfirm={() => {
+          setAlert({...alert, visible: false});
+          if (typeof alert.onConfirm === 'function') alert.onConfirm();
+        }}
+      />
     </View>
   );
 };
